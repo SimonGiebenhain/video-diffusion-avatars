@@ -1,0 +1,213 @@
+gpu_id: [0] #[4,5,6,7]
+
+exp_name: LaRa/release-test-head-cluster
+
+n_views: 2
+
+reconstruction_folder: recs
+
+exp_tag : _
+
+viz_uv_mesh : False
+
+model:
+    attn_drop : 0.2
+    model_type: 'flame_params'
+    prediction_type: 'normals'
+    network_type: 'transformer'
+    encoder_backbone: 'vit_small_patch16_224.dino' #'vit_base_patch16_224.dino' #'vit_base_patch16_224.dino' # ['vit_small_patch16_224.dino','vit_base_patch16_224.dino']
+
+    n_groups: [16]  # n_groups for local attention
+    n_offset_groups: 32     # offset radius of 1/n_offset_groups of the scene size
+
+    K: 2    # primitives per-voxel
+    sh_degree: 1    # view dependent color
+
+    num_layers: 6 #6 #12
+    num_heads: 8 #16
+
+    view_embed_dim: 16 #32
+    embedding_dim: 256 #128 #256
+
+    vol_feat_reso: 16
+    vol_embedding_reso: 32
+
+    vol_embedding_out_dim: 40 #80
+
+    ckpt_path: null # specify a ckpt path if you want to continue training
+
+    flame_dim: 101
+
+    finetune_backbone: False
+
+    feature_map_type: DINO
+
+    pred_conf: False
+
+    pred_disentangled : False
+
+    nocs : True
+
+
+
+    use_pos_enc : False
+
+    conv_dec : True
+
+    use_plucker : False
+    use_uv_enc : True
+
+    n_facial_components : 0
+
+    render_super : False
+
+    flame_shape_dim : 300
+    flame_expr_dim : 100
+
+    prior_input : False
+    use_neutral : True
+
+    reg_inner : True
+    n_inner_steps : 0 #20
+
+    corresp_align : False
+
+    pred_dim : 4
+
+    outer_vertex_mask : False
+
+    downsample_inps : False
+
+    flame2020 : True
+    use_mica : False
+
+    branched : True
+
+
+
+itl:
+    lr_expr: 0.1
+    lr_id: 0.05
+    lr_cam_pos: 0.0001 #0.005
+    lr_cam_rot: 0.001 #0.01
+    lr_fl: 0.01 #0.03
+    lr_pp: 0.00001 #0.002
+    lr_jaw : 0.0001
+
+    lr_expr_outer : 0.00001
+    lr_shape_outer : 0.00001
+    lr_cam_pos_outer : 0.000001
+    lr_cam_rot_outer : 0.000001
+    lr_fl_outer : 0.000001
+    lr_pp_outer : 0.000001
+
+    noise_strenght : 0.5
+
+    ffwd_init : True
+    ffwd_init_flame : True
+    ffwd_flame_weight : 0.01
+
+    scale_reg_id : 10
+    scale_reg_ex : 10
+    scale_confidence : 10
+
+    n_steps_cam : 0
+
+    use_uv : True
+    use_n : True
+    use_ncan : False
+    use_disp : False
+
+    reg_conf: 0.01
+    totvar_conf : 1.0
+
+    uv_loss_mult : 3
+    n_loss_mult : 0.0
+
+    const_conf : False
+    uv_l2 : False
+    n_mask_new : False
+
+    reg_shape: 0.01
+    reg_shape_ffwd: 0.01
+    reg_expr: 0.01
+    reg_expr_ffwd: 0.01
+
+    rnd_warmup : False
+    use_outer_normals : True
+    normal_inp : True
+    rnd_n_inner : False
+    n_inner_min : 20
+    n_inner_max : 100
+    fov_mult : 1.0
+
+    outer_l2 : True
+
+    pred_face_region : False
+    sup_back_more : True
+
+
+data:
+    load_normal: False
+    load_flame: False
+    load_uv : False
+    load_pos_map : False
+    load_depth : False
+    load_verts : False
+    load_arcface : False
+    load_albedo : False
+    load_nocs : False
+    mirror_aug : False
+    disable_aug: False
+    disable_color_aug: False
+    use_nphm : True
+    use_ava : True
+    use_facescape : True
+    use_celeba : False
+    use_lyhm : True
+    use_stirling : True
+    use_video : False
+    use_cafca : True
+    use_now : False
+    use_mimicme : True
+
+    add_occ : False
+
+    use_p3dmm : True
+
+
+    load_consist : False
+    load_prior : False
+
+    overfit : False
+
+    more_verts: False
+
+    load_facer: False
+
+
+
+train:
+    batch_size: 8 #3
+    lr: 4e-4 #1e-2 #4e-4
+    lr_backbone: 1e-5 #4e-4
+    beta1: 0.9
+    beta2: 0.95 #0.95
+    weight_decay: 0.05
+    warmup_iters: 200
+    n_epoch: 3000 #3000
+    limit_train_batches: 0.05 #0.2 #1.0 #0.1 #1.0 #0.2
+    limit_val_batches: 0.02 #0.05 #1 #0.02
+    check_val_every_n_epoch: 1
+    start_fine: 5000
+    use_rand_views: False
+    duster_loss: False
+    start_2d_vertex_loss : 500 #2500
+    start_normal_render_loss : 1000 #5000
+
+test:
+    batch_size: 8 #3
+
+logger:
+    name: wandb #tensorboard
+    dir: logs/${exp_name}

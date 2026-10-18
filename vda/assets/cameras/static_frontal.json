@@ -1,0 +1,14 @@
+{
+ "doc": "fixed frontal camera",
+ "units": "deg",
+ "start": {
+  "az": 0,
+  "el": 0,
+  "rad": 1.0
+ },
+ "legs": [
+  {
+   "n": 77
+  }
+ ]
+}

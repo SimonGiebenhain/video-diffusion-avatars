@@ -1,0 +1,16 @@
+{
+ "doc": "one linear sweep from 60 deg left to 60 deg right at eye level",
+ "units": "deg",
+ "start": {
+  "az": -60,
+  "el": 0,
+  "rad": 1.0
+ },
+ "legs": [
+  {
+   "n": 77,
+   "az": 60,
+   "ease": "linear"
+  }
+ ]
+}

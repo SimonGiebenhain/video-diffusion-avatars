@@ -1,0 +1,120 @@
+config_name : test
+
+batch_size : 16 # batch size used during joint optimization stage, when your video has less frames than batch_size the script will crash currently
+num_views : 1
+# keep the stage-2 observation cache in host memory instead of VRAM (one H2D copy per iteration;
+# removes the sequence-length VRAM limit)
+cache_on_cpu : false
+size : 256 # defines the rendering resolution, you could also try 512
+image_size : [256, 256] # make sure to update this accordingly, sorry for the redundancy
+
+data_folder : none
+p3dmm_folder : none
+
+extra_cam_steps : False
+big_normal_mask : False
+
+start_frame : 0
+
+num_shape_params : 300
+num_exp_params : 100
+tex_params : 140
+iters : 200 #800 #400 # Number if iterations in first stage of tracking. For single-image fitting, you might want to choose a larger value, e.g. 500 or 800
+global_iters : 5000 # Number f iterations for second stage of tracking (video only)
+
+
+no_lm : False # disable all landmark losses (only eye and mouth landmarks are used)
+use_eyebrows : False # not sure if used
+use_mouth_lmk : True # toggle use of mouth landmarks
+no_pho : True # unused
+no_sh : True # unused
+disable_edge : False # unused
+
+keyframes : [] # unused
+
+ignore_mica : False
+
+uv_map_super : 2000.0 #500.0 #100 #2001.0 #5000.0 #2000.0 # weight for UV-loss
+normal_super : 1000.0 #202.0 # weight for normal loss
+normal_super_can : 0.0 # unused
+sil_super : 500 # weight for silhouette loss
+
+# parameters for UV loss
+uv_loss:
+  stricter_uv_mask : False
+  delta_uv : 0.00005 #0.00005 #0.0005 #0.00005 # threshold that determines if correspondence is valid or not, ref. to eq.7 of the paper
+  delta_uv_fine : 0.00005 #0.00005 #0.0005 #0.00005 # unused
+  dist_uv : 20 #20 #15 # correspondences with a higher distance than this are considered outliers
+  dist_uv_fine : 20 #35 #20 #15 # unused
+
+
+occ_filter : True
+
+# learning rates for different optimizable parameters
+lr_id : 0.002 #0.003 #0.006 #0.003
+lr_exp : 0.005 # 0.005 #0.01 #0.01 #0.005
+lr_jaw : 0.005 #0.003
+lr_neck : 0.001 #0.0005
+lr_R : 0.005 #0.005 #0.002 #0.01# 0.0001
+lr_t : 0.001 #0.002 #0.001 #0.0005 #0.0005
+lr_f : 0.1 #0.05 #0.01 #0.001
+lr_pp : 0.00005
+
+# some loss weights
+w_pho : 0 #150 # unused
+w_lmks : 1000 # 3000weight for eye landmarks
+w_lmks_mouth : 0 #1000 # weight for mouth landmarks
+w_lmks_68 : 0 #1000 # unused
+w_lmks_lid :  1000 # weightr for eye closure loss
+w_lmks_iris : 1000 # weight for iris/pupil loss, responsible for viewing direction
+w_lmks_oval : 0 #2000 # unused
+w_lmks_star : 0 # unused
+
+include_neck : True # whether to optimize for neck or not
+
+# regualization weights for different optimizable parameters
+w_shape :  0.2
+w_shape_general : 0.05
+w_exp : 0.05
+w_jaw : 0.01
+w_neck : 0.1
+
+n_fine : False # unused
+low_overhead : False # unused
+
+delta_n : 0.33 # threshold that determines above which loss pixels in the normal loss map are considered outliers
+
+global_camera : True 
+
+# smoothness loss weights 
+reg_smooth_exp : 50.0
+reg_smooth_eyes : 10.0
+reg_smooth_eyelids : 2.0
+reg_smooth_jaw : 50.0
+reg_smooth_neck : 1000.0
+reg_smooth_R : 2000.0
+reg_smooth_t : 15200.0
+reg_smooth_pp : 420.0
+reg_smooth_fl : 420.0
+
+reg_smooth_mult : 1.0
+
+uv_l2 : True
+normal_l2 : False
+smooth : True
+normal_mask_ksize : 13
+
+early_stopping_delta : 5.0 # a higher value will make stage 1 tracking faster but less accurate
+
+early_exit : False
+
+draw_uv_corresp : False # add additional visualizations to result.mp4, e.g. uv-loss and normal loss map
+
+save_landmarks : False
+
+save_meshes : True
+delete_preprocessing : False
+
+is_discontinuous : False
+
+use_flame2023: False # use flame_2023 version WITHOUT explicit jaw rotation

@@ -1,0 +1,21 @@
+{
+ "doc": "frontal, slow push-in to 0.75x the default distance and back",
+ "units": "deg",
+ "start": {
+  "az": 0,
+  "el": 0,
+  "rad": 1.0
+ },
+ "legs": [
+  {
+   "n": 38,
+   "rad": 0.75,
+   "ease": "smoother"
+  },
+  {
+   "n": 39,
+   "rad": 1.0,
+   "ease": "smoother"
+  }
+ ]
+}

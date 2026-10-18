@@ -1,0 +1,190 @@
+{
+ "doc": "41 s (1029 frames) for the fast model: half-sweeps between +-65 deg azimuth, passing frontal every 68 frames",
+ "start": {
+  "az": 0.0,
+  "el": 0.0,
+  "rad": 1.0
+ },
+ "legs": [
+  {
+   "n": 36,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 36,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 34,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 36,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 37,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  }
+ ]
+}

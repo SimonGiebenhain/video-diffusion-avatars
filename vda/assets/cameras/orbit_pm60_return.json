@@ -1,0 +1,26 @@
+{
+ "doc": "frontal -> 60 deg left -> 60 deg right -> frontal",
+ "units": "deg",
+ "start": {
+  "az": 0,
+  "el": 0,
+  "rad": 1.0
+ },
+ "legs": [
+  {
+   "n": 20,
+   "az": -60,
+   "ease": "smoother"
+  },
+  {
+   "n": 38,
+   "az": 60,
+   "ease": "smoother"
+  },
+  {
+   "n": 19,
+   "az": 0,
+   "ease": "smoother"
+  }
+ ]
+}

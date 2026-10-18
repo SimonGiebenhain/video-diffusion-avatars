@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "video-diffusion-avatars"
+version = "1.0.0"
+description = "Expression- and camera-controllable portrait animation on WAN2.2-Animate-14B"
+readme = "README.md"
+license = { text = "CC BY-NC-SA 4.0 (third-party components: see LICENSE)" }
+requires-python = ">=3.10"
+# No hard dependencies on purpose: the released outputs are reproduced with exact versions (envs/setup_env.sh),
+# and torch must come from the CUDA 12.8 index. A loose list here would let pip upgrade pinned packages or pull a
+# CPU torch. Install the environment first (envs/setup_env.sh), or use the pinned extras:
+#   pip install torch==2.10.0 torchvision==0.25.0 --index-url https://download.pytorch.org/whl/cu128
+#   pip install -e ".[generate]"          # generation only (generate.py, download.py)
+dependencies = []
+dynamic = ["optional-dependencies"]
+
+[tool.setuptools.dynamic.optional-dependencies]
+generate = { file = ["envs/requirements_generate.txt"] }
+preprocess = { file = ["envs/requirements_preprocess.txt"] }
+
+[tool.setuptools.packages.find]
+include = ["vda*"]
+
+[tool.setuptools.package-data]
+vda = ["assets/*.npy", "assets/cameras/*.json"]
+"vda.third_party.diffsynth" = ["LICENSE"]
+"vda.third_party.wan_pose" = ["LICENSE_Wan2.2.txt"]
+"vda.third_party.xnemo" = ["LICENSE"]

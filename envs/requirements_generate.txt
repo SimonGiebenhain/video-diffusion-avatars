@@ -1,0 +1,24 @@
+# Generation env `vda` (Python 3.12). Exact versions of the env that produced the reference renders.
+# torch from the CUDA 12.8 index:
+#   pip install torch==2.10.0 torchvision==0.25.0 --index-url https://download.pytorch.org/whl/cu128
+# DO NOT install flash-attn / sage-attention: the DiT then silently switches attention backend and the
+# outputs stop matching the released renders (everything was produced with torch SDPA).
+accelerate==1.14.0
+einops==0.8.2
+ftfy==6.3.1
+huggingface_hub==1.21.0
+imageio==2.37.3
+imageio-ffmpeg==0.6.0
+modelscope==1.38.0
+numpy==1.26.4
+opencv-python==4.11.0.86
+peft==0.19.1
+pillow==12.3.0
+protobuf==7.35.1
+regex==2026.6.28
+safetensors==0.8.0
+scipy==1.17.1
+sentencepiece==0.2.1
+tqdm==4.68.3
+transformers==5.12.1
+typing_extensions==4.16.0

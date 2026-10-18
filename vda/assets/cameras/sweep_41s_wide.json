@@ -1,0 +1,58 @@
+{
+ "doc": "41 s (1029 frames) for the fast model: frontal -> +-65 deg azimuth half-sweeps of 147 frames -> frontal",
+ "start": {
+  "az": 0.0,
+  "el": 0.0,
+  "rad": 1.0
+ },
+ "legs": [
+  {
+   "n": 74,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 147,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 147,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 147,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 147,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 147,
+   "az": 1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 147,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother"
+  },
+  {
+   "n": 73,
+   "az": 0.0,
+   "el": 0.0,
+   "ease": "smoother"
+  }
+ ]
+}

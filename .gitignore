@@ -1,0 +1,14 @@
+/cache/
+/outputs/
+/weights/
+/examples/
+__pycache__/
+*.pyc
+build/
+dist/
+*.egg-info/
+# downloaded / cloned by third_party/pixel3dmm/install_preprocessing_pipeline.sh
+/third_party/pixel3dmm/pretrained_weights/
+/third_party/pixel3dmm/src/pixel3dmm/preprocessing/MICA/
+/third_party/pixel3dmm/src/pixel3dmm/preprocessing/PIPNet/
+/third_party/pixel3dmm/src/pixel3dmm/preprocessing/facer/

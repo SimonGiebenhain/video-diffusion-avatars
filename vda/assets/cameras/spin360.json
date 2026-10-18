@@ -1,0 +1,16 @@
+{
+ "doc": "one full 360 deg revolution at eye level, constant speed, starting frontal (the back of the head was never seen in training)",
+ "units": "deg",
+ "start": {
+  "az": 0,
+  "el": 0,
+  "rad": 1.0
+ },
+ "legs": [
+  {
+   "n": 81,
+   "az": 360,
+   "ease": "linear"
+  }
+ ]
+}

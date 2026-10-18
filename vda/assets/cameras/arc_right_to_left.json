@@ -1,0 +1,19 @@
+{
+ "doc": "one arc from the right side to the left side, rising over the face in the middle",
+ "az_span_deg": 130,
+ "el_span_deg": 50,
+ "start": {
+  "az": 1.0,
+  "el": 0.0,
+  "rad": 1.0
+ },
+ "legs": [
+  {
+   "n": 71,
+   "az": -1.0,
+   "el": 0.0,
+   "ease": "smoother",
+   "el_bump": 0.35
+  }
+ ]
+}
