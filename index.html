@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Video Diffusion Avatars: Taming Video Diffusion Models into Controllable 3D Avatars</title>
+<meta name="description" content="Video Diffusion Avatars turn a single photo into a photo-realistic, multi-view consistent avatar with independent control over camera viewpoint, neck pose, and facial expression.">
+<meta property="og:title" content="Video Diffusion Avatars">
+<meta property="og:description" content="Video Diffusion Avatars turn a single photo into a photo-realistic, multi-view consistent avatar with independent control over camera viewpoint, neck pose, and facial expression.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://simongiebenhain.github.io/video-diffusion-avatars/">
+<meta property="og:image" content="https://simongiebenhain.github.io/video-diffusion-avatars/static/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://simongiebenhain.github.io/video-diffusion-avatars/static/og.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b0f16'/%3E%3Ccircle cx='32' cy='33' r='16' fill='none' stroke='%23edf1f7' stroke-width='4'/%3E%3Ccircle cx='32' cy='17' r='5.5' fill='%232563eb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+<style>:root {
+  /* Layout: a dark cinematic hero with a film-strip of avatars, then a white paper body on a 1200px measure;
+     sections alternate paper and mist, and the long-video stage returns to night. One deliberate light theme,
+     set explicitly: every video carries its own background. */
+  --night: #0b0f16;
+  --night-2: #161c27;
+  --paper: #ffffff;
+  --mist: #f3f5f8;
+  --line: #e1e5ec;
+  --ink: #0f141c;
+  --muted: #586273;
+  --accent: #2563eb;
+  --accent-ink: #1d4ed8;
+  --on-night: #edf1f7;
+  --on-night-muted: #9aa5b8;
+  --serif: "Newsreader", "Iowan Old Style", "Times New Roman", serif;
+  --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --gutter: clamp(16px, 4vw, 32px);
+  color-scheme: light;
+}
+[hidden] { display: none !important; }
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.6 var(--sans);
+       -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+img, video, canvas { display: block; max-width: 100%; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+button { font: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1200px; margin-inline: auto; padding-inline: var(--gutter); }
+.wrap.narrow { max-width: 940px; }
+.mono { font-family: var(--mono); }
+sup { font-size: 0.66em; margin-left: 1px; }
+
+/* top bar: slides in once the hero has scrolled away */
+.topnav { position: fixed; top: 0; left: 0; right: 0; z-index: 40; padding-top: env(safe-area-inset-top, 0px);
+          background: rgba(255, 255, 255, 0.9); -webkit-backdrop-filter: saturate(1.4) blur(10px); backdrop-filter: saturate(1.4) blur(10px);
+          border-bottom: 1px solid var(--line); transform: translateY(-105%); transition: transform 0.3s ease; }
+.topnav.show { transform: none; }
+.topnav-in { display: flex; align-items: center; justify-content: space-between; gap: 20px; height: 56px; }
+.brand { font: 500 1.08rem/1 var(--serif); color: var(--ink); white-space: nowrap; }
+.brand:hover { text-decoration: none; }
+.topnav-links { display: flex; gap: 22px; overflow-x: auto; scrollbar-width: none; }
+.topnav-links::-webkit-scrollbar { display: none; }
+.topnav-links a { font: 500 0.86rem/1 var(--sans); color: var(--muted); white-space: nowrap; }
+.topnav-links a:hover { color: var(--ink); text-decoration: none; }
+@media (max-width: 760px) { .brand { display: none; } .topnav-links { gap: 18px; } }
+
+/* hero */
+.hero { background: var(--night); color: var(--on-night); padding-block: clamp(56px, 9vw, 96px) 40px; overflow: hidden; }
+.hero-text { text-align: center; max-width: 1280px; margin-inline: auto; padding-inline: var(--gutter); }
+.hero h1 { font: 500 clamp(2.5rem, 6.8vw, 5.6rem)/0.98 var(--serif); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+.tagline { font: 400 clamp(1.7rem, 4vw, 2.8rem)/1.2 var(--serif); letter-spacing: -0.01em; color: var(--on-night-muted); margin: 0.8rem 0 2rem; text-wrap: balance; }
+.authors, .affils { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; }
+.authors { gap: 0.4rem 1.5rem; font-size: 1.08rem; }
+.authors a { color: var(--on-night); box-shadow: inset 0 -1px 0 rgba(237, 241, 247, 0.28); }
+.authors a:hover { text-decoration: none; box-shadow: inset 0 -1px 0 var(--on-night); }
+.affils { gap: 0.25rem 1.4rem; margin-top: 0.6rem; color: var(--on-night-muted); font-size: 0.95rem; }
+.pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; margin-top: 2rem; }
+.pill { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.05rem; border-radius: 999px;
+        font: 500 0.93rem/1 var(--sans); color: var(--night); background: var(--on-night); }
+.pill:hover { background: var(--paper); text-decoration: none; }
+.pill svg { width: 1.05em; height: 1.05em; flex: none; }
+.pill.is-soon { background: transparent; color: var(--on-night-muted); box-shadow: inset 0 0 0 1px rgba(154, 165, 184, 0.38); }
+.pill small { font: 500 0.66rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.85; }
+.strip { display: grid; grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); gap: 14px; max-width: calc(var(--n, 8) * 250px);
+         margin: clamp(40px, 6vw, 64px) auto 0; padding-inline: var(--gutter); }
+.tile { position: relative; margin: 0; aspect-ratio: 9 / 16; border-radius: 14px; overflow: hidden; background: var(--night-2); }
+.tile video { width: 100%; height: 100%; object-fit: cover; }
+.tile-ref { position: absolute; left: 8px; bottom: 8px; width: 30%; height: auto; aspect-ratio: 9 / 16; object-fit: cover;
+            border-radius: 6px; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 6px 16px rgba(0, 0, 0, 0.4); }
+.strip-note { text-align: center; color: var(--on-night); font: 400 clamp(1.05rem, 1.9vw, 1.35rem)/1.5 var(--sans); max-width: 52rem; margin: 26px auto 0; padding-inline: var(--gutter); text-wrap: balance; }
+@media (max-width: 1100px) {
+  .strip { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: clamp(150px, 34vw, 240px);
+           overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 4px; }
+  .strip::-webkit-scrollbar { display: none; }
+  .tile { scroll-snap-align: start; }
+}
+
+/* sections */
+.sec { padding-block: clamp(64px, 9vw, 112px); }
+.sec.mist { background: var(--mist); }
+.sec.night { background: var(--night); color: var(--on-night); }
+.sec-head { max-width: 780px; margin-bottom: clamp(28px, 4vw, 44px); }
+.sec-head h2 { font: 500 clamp(2rem, 3.8vw, 2.9rem)/1.08 var(--serif); letter-spacing: -0.012em; margin: 0 0 0.75rem; text-wrap: balance; }
+.sec-head p { color: var(--muted); font-size: 1.08rem; margin: 0; }
+.night .sec-head p { color: var(--on-night-muted); }
+h3 { font: 500 1.4rem/1.25 var(--serif); margin: 0 0 0.7rem; text-wrap: balance; }
+.label { font: 500 0.7rem/1.35 var(--mono); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+figcaption { font: 500 0.7rem/1.35 var(--mono); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-top: 7px; }
+.pending { padding: 48px 24px; border: 1px dashed var(--line); border-radius: 14px; color: var(--muted); text-align: center; }
+
+/* overview */
+.two { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 72px); align-items: start; }
+.lede > p { font: 400 clamp(1.15rem, 1.9vw, 1.42rem)/1.5 var(--serif); margin: 0; }
+.lede b { font-weight: 500; color: var(--accent-ink); }
+details.abstract { margin-top: 1.8rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+details.abstract summary { cursor: pointer; list-style: none; font: 500 0.95rem/1.4 var(--sans); color: var(--accent); }
+details.abstract summary::-webkit-details-marker { display: none; }
+details.abstract summary::before { content: "+"; display: inline-block; width: 1.1em; font-family: var(--mono); }
+details.abstract[open] summary::before { content: "\2212"; }
+details.abstract p { font: 400 1rem/1.7 var(--sans); margin: 0.9rem 0 0; }
+.facts { margin: 0; border-top: 1px solid var(--line); }
+.facts div { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--line); }
+.facts dt { font: 500 0.72rem/1.7 var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.facts dd { margin: 0; font-size: 1rem; line-height: 1.5; }
+@media (max-width: 880px) { .two { grid-template-columns: 1fr; } }
+
+/* segmented controls */
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 999px; background: var(--paper);
+       box-shadow: inset 0 0 0 1px var(--line); }
+.seg-btn { font: 500 0.96rem/1 var(--sans); color: var(--muted); background: transparent; border: 0; border-radius: 999px;
+           padding: 0.7rem 1.2rem; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.seg-btn:hover { color: var(--ink); }
+.seg-btn[aria-selected="true"], .seg-btn[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+.seg-small .seg-btn { font-size: 0.86rem; padding: 0.55rem 0.95rem; }
+.seg-col { display: grid; border-radius: 18px; }
+.seg-col .seg-btn { text-align: left; border-radius: 14px; }
+
+/* controls */
+.ctrl-text { color: var(--muted); margin: 20px 0 24px; max-width: 640px; min-height: 3.2em; }
+.ctrl-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.ctrl-card { background: var(--paper); border-radius: 18px; padding: 10px 10px 12px; box-shadow: 0 0 0 1px var(--line), 0 8px 24px rgba(15, 20, 28, 0.05); }
+.ctrl-gen { width: 100%; height: auto; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 12px; background: var(--mist); }
+.ctrl-in { display: flex; gap: 10px; margin-top: 10px; align-items: flex-start; }
+.ctrl-in figure { margin: 0; min-width: 0; }
+.ctrl-in img, .ctrl-in video { height: clamp(84px, 9vw, 118px); width: auto; border-radius: 8px; background: var(--mist); }
+.cond-camera video { background: var(--paper); box-shadow: 0 0 0 1px var(--line); }
+@media (max-width: 1040px) { .ctrl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .ctrl-grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 78%; overflow-x: auto;
+               scroll-snap-type: x mandatory; padding-bottom: 6px; scrollbar-width: none; }
+  .ctrl-grid::-webkit-scrollbar { display: none; }
+  .ctrl-card { scroll-snap-align: start; }
+}
+
+/* method */
+.method-fig { margin: 0 0 clamp(40px, 6vw, 64px); }
+.method-fig img { width: 100%; height: auto; }
+.method-fig figcaption { margin-top: 12px; }
+.ideas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(28px, 4vw, 48px); }
+.idea { min-width: 0; }
+.idea { border-top: 2px solid var(--ink); padding-top: 14px; }
+.idea .label { display: block; margin-bottom: 0.5rem; color: var(--accent); }
+.idea p { margin: 0; font-size: 0.98rem; line-height: 1.68; }
+.triplet { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
+.triplet figure { margin: 0; }
+.triplet img, .triplet video { width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; background: var(--mist); }
+@media (max-width: 920px) { .ideas { grid-template-columns: 1fr; } }
+
+/* DISTRACT chart */
+.distract { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: clamp(32px, 6vw, 72px);
+            margin-top: clamp(56px, 8vw, 88px); padding-top: clamp(40px, 5vw, 56px); border-top: 1px solid var(--line); align-items: start; }
+.distract-text p { margin: 0 0 1.5rem; }
+.chart { margin: 0; --name: 8.4rem; --val: 7.4rem; }
+.chart-axis, .bar-row { display: grid; grid-template-columns: var(--name) minmax(0, 1fr) var(--val); gap: 12px; align-items: center; }
+.chart-axis { font: 500 0.68rem/1 var(--mono); color: var(--muted); }
+.chart-axis .ticks { display: flex; justify-content: space-between; }
+.chart-axis i { font-style: normal; width: 0; display: flex; justify-content: center; white-space: nowrap; }
+.chart-axis i:first-child { justify-content: flex-start; }
+.chart-axis i:last-child { justify-content: flex-end; }
+.bar-group { font: 500 0.7rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin: 20px 0 6px; }
+.bar-row { height: 32px; transition: opacity 0.4s; }
+.bar-name { font-size: 0.93rem; }
+.is-ours .bar-name { font-weight: 600; }
+.bar-track { position: relative; height: 14px; border-radius: 7px; background-color: var(--mist);
+             background-image: linear-gradient(90deg, transparent calc(25% - 0.5px), var(--line) calc(25% - 0.5px), var(--line) calc(25% + 0.5px), transparent calc(25% + 0.5px), transparent calc(50% - 0.5px), var(--line) calc(50% - 0.5px), var(--line) calc(50% + 0.5px), transparent calc(50% + 0.5px), transparent calc(75% - 0.5px), var(--line) calc(75% - 0.5px), var(--line) calc(75% + 0.5px), transparent calc(75% + 0.5px)); }
+.bar-raw, .bar-probe { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; }
+.bar-raw { width: calc(var(--v) * 1%); background: #8d97a8; }
+.is-ours .bar-raw { background: #47536a; }
+.bar-probe { width: 0; background: var(--accent); transition: width 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.chart[data-mode="probe"] .bar-probe { width: calc(var(--v) * 1%); }
+.chart[data-mode="probe"] .no-probe { opacity: 0.38; }
+.bar-val { font: 500 0.84rem/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v-probe { display: none; }
+.chart[data-mode="probe"] .v-raw { display: none; }
+.chart[data-mode="probe"] .v-probe { display: inline; }
+.chart figcaption { margin-top: 16px; }
+@media (max-width: 920px) { .distract { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .chart { --name: 6.6rem; --val: 6rem; } .bar-name { font-size: 0.84rem; } .bar-val { font-size: 0.74rem; } }
+
+/* comparison */
+.stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 44px; margin: 0 0 36px; }
+.stat b { display: block; font: 500 clamp(2.4rem, 5vw, 3.3rem)/1 var(--serif); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.stat span { font: 500 0.74rem/1.5 var(--mono); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+.stats-note { color: var(--muted); font-size: 0.92rem; margin: 0; max-width: 22rem; }
+.cmp-tasks { margin-bottom: 14px; }
+.cmp-desc { color: var(--muted); margin: 0 0 28px; max-width: 680px; min-height: 3.2em; }
+.cmp, .orb { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: clamp(24px, 4vw, 44px); align-items: start; }
+.cmp-cases { display: grid; gap: 6px; }
+.case { display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px 8px 6px 6px; border: 0; border-radius: 12px;
+        background: transparent; cursor: pointer; text-align: left; font: 500 0.9rem/1.3 var(--sans); color: var(--muted); }
+.case img { width: 44px; height: 55px; object-fit: cover; border-radius: 7px; flex: none; }
+.case:hover { color: var(--ink); }
+.case[aria-selected="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 0 0 1px var(--line), 0 2px 10px rgba(15, 20, 28, 0.06); }
+.sec:not(.mist) .case[aria-selected="true"] { background: var(--mist); box-shadow: none; }
+.cmp-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 24px; }
+.cmp-inputs figure:nth-child(3) { grid-column: 1 / -1; max-width: calc(50% - 5px); }
+.cmp-inputs figure { margin: 0; }
+.cmp-inputs img, .cmp-inputs video { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; background: var(--line); }
+.cmp-main { display: grid; justify-items: center; gap: 18px; min-width: 0; }
+.cmp-stage { position: relative; width: min(100%, 600px); border-radius: 18px; overflow: hidden; background: #000;
+             cursor: ew-resize; touch-action: pan-y; user-select: none; -webkit-user-select: none; box-shadow: 0 16px 48px rgba(15, 20, 28, 0.14); }
+.cmp-stage { background-size: cover; background-position: center; }
+.cmp-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cmp-src { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+.cmp-divider { position: absolute; top: 0; bottom: 0; left: var(--x); width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.knob { position: absolute; top: 50%; left: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%; background: #fff;
+        color: var(--ink); display: grid; place-items: center; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.28); }
+.knob svg { width: 20px; height: 20px; }
+.cmp-tag { position: absolute; top: 12px; font: 500 0.74rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: #fff;
+           background: rgba(11, 15, 22, 0.64); padding: 0.45rem 0.6rem; border-radius: 7px; pointer-events: none; }
+.cmp-tag.left { left: 12px; }
+.cmp-tag.right { right: 12px; background: var(--accent); }
+.cmp-methods { justify-content: center; }
+.cmp-methods .is-gt { margin-left: 10px; box-shadow: -10px 0 0 -9px var(--line); }
+@media (max-width: 900px) {
+  .cmp, .orb { grid-template-columns: minmax(0, 1fr); }
+  .cmp-side { order: 2; }
+  .cmp-cases { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* 360 orbit */
+.orb-side { display: grid; gap: 22px; align-content: start; min-width: 0; }
+.orb-stage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; cursor: grab; touch-action: pan-y;
+             user-select: none; -webkit-user-select: none; min-width: 0; }
+.orb-stage.dragging { cursor: grabbing; }
+.orb-stage figure { margin: 0; min-width: 0; }
+.orb-stage canvas { width: 100%; height: auto; border-radius: 16px; background: var(--mist); }
+.orb-stage figcaption { text-align: center; }
+.orb-stage figure:last-child figcaption { color: var(--accent); }
+.orb-readout { grid-column: 2; display: flex; align-items: center; gap: 12px; margin-top: -8px; }
+.dial { width: 34px; height: 34px; color: var(--accent); flex: none; }
+.az { font-size: 1.05rem; min-width: 3.4em; font-variant-numeric: tabular-nums; }
+.hint { color: var(--muted); font-size: 0.9rem; }
+@media (max-width: 900px) { .orb-readout { grid-column: 1; } .orb-side { order: 2; } .orb .cmp-cases { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* long videos */
+.long-scroll { overflow-x: auto; border-radius: 14px; }
+.long-stage { position: relative; min-width: 720px; border-radius: 14px; overflow: hidden; background: #000; }
+.long-video { width: 100%; height: auto; }
+.cell-label { position: absolute; transform: translateY(calc(-100% - 8px)); margin-left: 8px; font: 500 0.66rem/1 var(--mono);
+              text-transform: uppercase; letter-spacing: 0.08em; color: #fff; background: rgba(11, 15, 22, 0.72); padding: 0.38rem 0.5rem; border-radius: 5px; }
+.long-hud { display: flex; align-items: center; gap: 14px; margin-top: 14px; color: var(--on-night-muted); font-size: 0.82rem; }
+.long-hud .frame { font-variant-numeric: tabular-nums; min-width: 9.5em; text-align: right; }
+.long-bar { flex: 1; height: 2px; background: rgba(255, 255, 255, 0.16); border-radius: 2px; overflow: hidden; }
+.long-bar span { display: block; height: 100%; width: 0; background: var(--on-night); }
+
+/* video + BibTeX */
+.feature-video { width: 100%; height: auto; border-radius: 16px; background: #000; box-shadow: 0 16px 48px rgba(15, 20, 28, 0.14); }
+.bib { position: relative; }
+.bib pre { font: 400 0.86rem/1.6 var(--mono); background: var(--paper); color: var(--ink); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line);
+           padding: 1.2rem 1.3rem; margin: 0; overflow-x: auto; }
+.copy { position: absolute; top: 10px; right: 10px; font: 500 0.8rem/1 var(--sans); padding: 0.55rem 0.9rem; border-radius: 999px; border: 0;
+        background: var(--ink); color: var(--paper); cursor: pointer; }
+.foot { padding-block: 32px 48px; color: var(--muted); font-size: 0.86rem; text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .topnav, .bar-probe, .seg-btn, .bar-row { transition: none; }
+}
+
+/* TL;DR + colour-coded building blocks (overview) and camera colours (method figure legend) */
+.tldr { display: inline-block; font: 600 0.72rem/1 var(--mono); letter-spacing: 0.1em; color: var(--paper); background: var(--ink);
+        padding: 0.35rem 0.5rem; border-radius: 6px; vertical-align: 0.3em; margin-right: 0.35rem; }
+.hl { font-weight: 500; padding: 0 0.12em; border-radius: 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.hl-prior { color: #1d4ed8; background: rgba(37, 99, 235, 0.09); }
+.hl-data { color: #0b7a5b; background: rgba(16, 150, 110, 0.10); }
+.hl-expr { color: #a3246f; background: rgba(183, 48, 153, 0.09); }
+.hl-ctrl { color: #b4400c; background: rgba(234, 108, 20, 0.10); }
+.cam { font-weight: 600; }
+.cam-ref { color: #b73099; }
+.cam-drv { color: #2563d0; }
+.cam-tar { color: #378d5c; }
+.yt { position: relative; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: #000; box-shadow: 0 16px 48px rgba(15, 20, 28, 0.14); }
+.yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* key phrases: a soft marker underline, readable on paper and on night sections */
+mark { background: linear-gradient(transparent 58%, rgba(37, 99, 235, 0.22) 58%); color: inherit; font-weight: 600; padding: 0 0.05em; }
+.night mark { background: linear-gradient(transparent 58%, rgba(96, 165, 250, 0.38) 58%); color: var(--on-night); }
+</style>
+</head>
+<body>
+
+<nav class="topnav" aria-label="Sections"><div class="wrap topnav-in">
+  <a class="brand" href="#top">Video Diffusion Avatars</a>
+  <div class="topnav-links"><a href="#controls">Controls</a><a href="#method">Method</a><a href="#compare">Comparison</a><a href="#orbit">360&deg;</a><a href="#long">Few-Step Distillation</a><a href="#video">Video</a></div>
+</div></nav>
+<header class="hero" id="top">
+  <div class="hero-text">
+    <h1>Video Diffusion Avatars</h1>
+    <p class="tagline">Taming video diffusion models into controllable 3D avatars</p>
+    <ul class="authors"><li><a href="https://simongiebenhain.github.io">Simon Giebenhain</a><sup>1</sup></li><li><a href="https://tobias-kirschstein.github.io/">Tobias Kirschstein</a><sup>1</sup></li><li><a href="https://nlml.github.io/">Liam Schoneveld</a><sup>2</sup></li><li><a href="https://openreview.net/profile?id=~Davide_Davoli1">Davide Davoli</a><sup>3</sup></li><li><a href="https://openreview.net/profile?id=~Zhe_Chen6">Zhe Chen</a><sup>2</sup></li><li><a href="https://niessnerlab.org/members/matthias_niessner/profile.html">Matthias Nießner</a><sup>1</sup></li></ul>
+    <ul class="affils"><li><sup>1</sup>Technical University of Munich</li><li><sup>2</sup>Woven by Toyota</li><li><sup>3</sup>Toyota Motor Europe NV/SA</li></ul>
+    <div class="pills"><span class="pill is-soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2.5h8l5 5v14H6z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M14 2.5v5h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>Paper<small>soon</small></span><span class="pill is-soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 5.5l13 13M18.5 5.5l-13 13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>arXiv<small>soon</small></span><span class="pill is-soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Code<small>soon</small></span><a class="pill" href="#video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Video</a><a class="pill" href="#bibtex"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 4C7.5 4 6.5 5 6.5 7v3c0 1-1 2-2 2 1 0 2 1 2 2v3c0 2 1 3 3 3M14.5 4c2 0 3 1 3 3v3c0 1 1 2 2 2-1 0-2 1-2 2v3c0 2-1 3-3 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>BibTeX</a></div>
+  </div>
+  <div class="strip" role="list" style="--n:7"><figure class="tile"><video class="auto" data-src="static/hero/swimmer.mp4" poster="static/hero/swimmer.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="Swimmer with goggles"></video><img class="tile-ref" src="static/hero/swimmer_ref.jpg" alt="Input photo" loading="lazy" width="90" height="160"></figure><figure class="tile"><video class="auto" data-src="static/hero/gele.mp4" poster="static/hero/gele.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="Woman in a gele headwrap"></video><img class="tile-ref" src="static/hero/gele_ref.jpg" alt="Input photo" loading="lazy" width="90" height="160"></figure><figure class="tile"><video class="auto" data-src="static/hero/vangogh.mp4" poster="static/hero/vangogh.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="Van Gogh self-portrait"></video><img class="tile-ref" src="static/hero/vangogh_ref.jpg" alt="Input photo" loading="lazy" width="90" height="160"></figure><figure class="tile"><video class="auto" data-src="static/hero/japanese_grandma.mp4" poster="static/hero/japanese_grandma.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="Grandmother with glasses"></video><img class="tile-ref" src="static/hero/japanese_grandma_ref.jpg" alt="Input photo" loading="lazy" width="90" height="160"></figure><figure class="tile"><video class="auto" data-src="static/hero/hijab.mp4" poster="static/hero/hijab.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="Woman in a hijab"></video><img class="tile-ref" src="static/hero/hijab_ref.jpg" alt="Input photo" loading="lazy" width="90" height="160"></figure><figure class="tile"><video class="auto" data-src="static/hero/cartoon.mp4" poster="static/hero/cartoon.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="Cartoon portrait"></video><img class="tile-ref" src="static/hero/cartoon_ref.jpg" alt="Input photo" loading="lazy" width="90" height="160"></figure><figure class="tile"><video class="auto" data-src="static/hero/greenhair.mp4" poster="static/hero/greenhair.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="Green hair"></video><img class="tile-ref" src="static/hero/greenhair_ref.jpg" alt="Input photo" loading="lazy" width="90" height="160"></figure></div>
+  <p class="strip-note">Video Diffusion Avatars (VDA) generates fully controllable avatars from a single image.</p>
+</header><main>
+<section class="sec" id="overview">
+  <div class="wrap two">
+    <div class="lede">
+      <p><span class="tldr">TL;DR</span> We leverage the world prior of existing video diffusion
+        models (VDMs) to create 3D avatars from a single image, by carefully fine-tuning the VDM on
+        public multi-view datasets and view-disentangled expression
+        codes. VDAs let the user generate videos with free control over facial expressions,
+        rendering camera and neck pose. The videos exhibit physically plausible dynamics and light interactions, such
+        as reflections, shadows and refractions.</p>
+      <details class="abstract"><summary>Read the abstract</summary><p>Video diffusion models (VDMs) trained on internet-scale data encode a rich prior on appearance, motion, and physics that is difficult to replicate with explicit 3D rendering and costly 3D data capture. We introduce Video Diffusion Avatars (VDAs), a method that creates photo-realistic, multi-view consistent avatars from a single image by fine-tuning a VDM for precise control over camera viewpoint, facial expression, and upper-body pose. Departing from 3D morphable models (3DMMs), VDAs use a learned expression space that lifts the expressiveness ceiling of 3DMMs, e.g. for the tongue and mouth interior. However, learned expression codes exhibit heavy viewpoint bias, as our DISTRACT benchmark reveals. We show that this bias can be removed through disentanglement, enabling their use as driving signals for multi-view consistent avatars. Camera and upper-body pose are controlled jointly via proxy-mesh renderings, giving independent control over expression, pose, and viewpoint. A camera-triplet training strategy makes the approach efficient: our models train for 34 hours on a single A100 using only public multi-view data. VDAs outperform state-of-the-art single-image 3D avatars on novel-view reenactment, reducing face LPIPS by 29% and improving perceptual quality (JOD) by 66% on BecomingLit. A static 3DGS reconstruction probe further confirms that our generations are the most multi-view consistent. Built on a video prior, VDAs produce effects beyond the reach of explicit renderers, including physically plausible hair dynamics, shadows, reflections, and refractions.</p></details>
+    </div>
+    <dl class="facts">
+      <div><dt>One input image</dt><dd>Generalizes to OOD, e.g. human-like creatures and drawings</dd></div>
+      <div><dt>Control inputs</dt><dd>Independent control over expression, target camera and upper-body pose</dd></div>
+      <div><dt>Expression control</dt><dd>View-disentangled X-NeMo expression codes (+ FLAME proxy)</dd></div>
+      <div><dt>Camera + upper-body control</dt><dd>2D skeleton and proxy mesh (FLAME + SAM&nbsp;3D&nbsp;Body)</dd></div>
+      <div><dt>Affordability</dt><dd>Training takes only 34 A100 hours, on public multi-view data only (NeRSemble, AVA-256)</dd></div>
+      <div><dt>Quality</dt><dd>&minus;29% face LPIPS and +66% JOD on BecomingLit</dd></div>
+    </dl>
+  </div>
+</section>
+<section class="sec mist" id="controls">
+  <div class="wrap">
+    <header class="sec-head"><h2>VDA offers three independent control signals</h2></header>
+    <div class="seg" role="tablist" aria-label="Control"><button class="seg-btn" role="tab" type="button" id="tab-camera" aria-controls="panel-camera" aria-selected="true">Camera viewpoint</button><button class="seg-btn" role="tab" type="button" id="tab-neck" aria-controls="panel-neck" aria-selected="false">Neck pose</button><button class="seg-btn" role="tab" type="button" id="tab-expr" aria-controls="panel-expr" aria-selected="false">Facial expression</button></div>
+    <div class="ctrl-panel" role="tabpanel" id="panel-camera" aria-labelledby="tab-camera"><p class="ctrl-text">The camera follows any path around the head. Reflections and refractions move with the view, while the person remains frozen here, as enforced by static expression and neck signals.</p><div class="ctrl-grid">
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/camera_1.mp4" data-poster="static/controls/camera_1.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="woman with tortoise-shell sunglasses"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/camera_1_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-camera"><video data-src="static/controls/camera_1_cond.mp4" data-poster="static/controls/camera_1_cond.jpg" width="480" height="360" muted loop playsinline preload="none" aria-label="Camera path"></video><figcaption>Camera path</figcaption></figure>
+          </div>
+        </article>
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/camera_2.mp4" data-poster="static/controls/camera_2.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="animated boy with curly hair"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/camera_2_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-camera"><video data-src="static/controls/camera_2_cond.mp4" data-poster="static/controls/camera_2_cond.jpg" width="480" height="360" muted loop playsinline preload="none" aria-label="Camera path"></video><figcaption>Camera path</figcaption></figure>
+          </div>
+        </article>
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/camera_3.mp4" data-poster="static/controls/camera_3.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="Shrek"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/camera_3_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-camera"><video data-src="static/controls/camera_3_cond.mp4" data-poster="static/controls/camera_3_cond.jpg" width="480" height="360" muted loop playsinline preload="none" aria-label="Camera path"></video><figcaption>Camera path</figcaption></figure>
+          </div>
+        </article>
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/camera_4.mp4" data-poster="static/controls/camera_4.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="man with black-framed glasses"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/camera_4_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-camera"><video data-src="static/controls/camera_4_cond.mp4" data-poster="static/controls/camera_4_cond.jpg" width="480" height="360" muted loop playsinline preload="none" aria-label="Camera path"></video><figcaption>Camera path</figcaption></figure>
+          </div>
+        </article></div></div><div class="ctrl-panel" role="tabpanel" id="panel-neck" aria-labelledby="tab-neck" hidden><p class="ctrl-text">We can control the upper-body pose by changing joint angles in the underlying proxy mesh.</p><div class="ctrl-grid">
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/neck_1.mp4" data-poster="static/controls/neck_1.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="young man with long hair in neon light"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/neck_1_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-neck"><video data-src="static/controls/neck_1_cond.mp4" data-poster="static/controls/neck_1_cond.jpg" width="360" height="480" muted loop playsinline preload="none" aria-label="Proxy mesh"></video><figcaption>Proxy mesh</figcaption></figure>
+          </div>
+        </article>
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/neck_2.mp4" data-poster="static/controls/neck_2.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="teenager with red hair"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/neck_2_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-neck"><video data-src="static/controls/neck_2_cond.mp4" data-poster="static/controls/neck_2_cond.jpg" width="360" height="480" muted loop playsinline preload="none" aria-label="Proxy mesh"></video><figcaption>Proxy mesh</figcaption></figure>
+          </div>
+        </article>
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/neck_3.mp4" data-poster="static/controls/neck_3.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="woman with a straw hat"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/neck_3_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-neck"><video data-src="static/controls/neck_3_cond.mp4" data-poster="static/controls/neck_3_cond.jpg" width="360" height="480" muted loop playsinline preload="none" aria-label="Proxy mesh"></video><figcaption>Proxy mesh</figcaption></figure>
+          </div>
+        </article>
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/neck_4.mp4" data-poster="static/controls/neck_4.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="woman with a beanie and locs"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/neck_4_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-neck"><video data-src="static/controls/neck_4_cond.mp4" data-poster="static/controls/neck_4_cond.jpg" width="360" height="480" muted loop playsinline preload="none" aria-label="Proxy mesh"></video><figcaption>Proxy mesh</figcaption></figure>
+          </div>
+        </article></div></div><div class="ctrl-panel" role="tabpanel" id="panel-expr" aria-labelledby="tab-expr" hidden><p class="ctrl-text">Here we add facial expressions, as dictated by a driving video.</p><div class="ctrl-grid">
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/expr_1.mp4" data-poster="static/controls/expr_1.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="swimmer with goggles"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/expr_1_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-expr"><video data-src="static/controls/expr_1_cond.mp4" data-poster="static/controls/expr_1_cond.jpg" width="360" height="480" muted loop playsinline preload="none" aria-label="Driving video"></video><figcaption>Driving video</figcaption></figure>
+          </div>
+        </article>
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/expr_2.mp4" data-poster="static/controls/expr_2.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="woman with glasses in striped light"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/expr_2_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-expr"><video data-src="static/controls/expr_2_cond.mp4" data-poster="static/controls/expr_2_cond.jpg" width="360" height="480" muted loop playsinline preload="none" aria-label="Driving video"></video><figcaption>Driving video</figcaption></figure>
+          </div>
+        </article>
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/expr_3.mp4" data-poster="static/controls/expr_3.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="Na&#x27;vi character"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/expr_3_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-expr"><video data-src="static/controls/expr_3_cond.mp4" data-poster="static/controls/expr_3_cond.jpg" width="360" height="480" muted loop playsinline preload="none" aria-label="Driving video"></video><figcaption>Driving video</figcaption></figure>
+          </div>
+        </article>
+        <article class="ctrl-card" data-sync>
+          <video class="ctrl-gen" data-src="static/controls/expr_4.mp4" data-poster="static/controls/expr_4.jpg" width="540" height="960" muted loop playsinline preload="none" aria-label="woman wearing a gele"></video>
+          <div class="ctrl-in">
+            <figure><img src="static/controls/expr_4_ref.jpg" width="270" height="480" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+            <figure class="cond-expr"><video data-src="static/controls/expr_4_cond.mp4" data-poster="static/controls/expr_4_cond.jpg" width="360" height="480" muted loop playsinline preload="none" aria-label="Driving video"></video><figcaption>Driving video</figcaption></figure>
+          </div>
+        </article></div></div>
+  </div>
+</section>
+<section class="sec" id="method">
+  <div class="wrap">
+    <header class="sec-head"><h2>How VDA works</h2>
+      <p>We fine-tune WAN-Animate-14B with two conditioning signals: a proxy-mesh rendering that sets camera and
+        upper-body pose, and disentangled expression codes that drive the face.</p></header>
+    <figure class="method-fig"><img src="static/method/method_overview.jpg" width="2400" height="888" alt="Architecture: reference image, proxy mesh and skeleton, and translated expression codes condition WAN-Animate-14B" loading="lazy"></figure>
+    <div class="ideas">
+      <article class="idea">
+        <span class="label">Training</span>
+        <h3>Camera triplets</h3>
+        <p>Each training sample shows one moment from three different cameras. The model sees the image from the
+          <span class="cam cam-ref">reference camera</span> and the video from the <span class="cam cam-drv">driving
+          camera</span> and must render the <span class="cam cam-tar">target camera</span>, which forces it to reason about
+          the head in 3D. Training takes
+          34&nbsp;hours on a single A100 with public data (NeRSemble, AVA-256).</p>
+      </article>
+      <article class="idea">
+        <span class="label">Camera and pose</span>
+        <h3>Proxy-mesh conditioning</h3>
+        <p>A FLAME head on a SAM&nbsp;3D&nbsp;Body torso is rendered into the <span class="cam cam-tar">target camera</span>.
+          Each pixel is colored by the direction of its <span class="cam cam-tar">target-camera</span> ray, expressed in the head
+          frame for the head and in a pelvis-aligned frame for the torso, so the color contrast between them encodes the neck pose
+          while the overall shading encodes the <span class="cam cam-tar">target viewpoint</span>.</p>
+      </article>
+      <article class="idea">
+        <span class="label">Expression</span>
+        <h3>View-invariant expression codes</h3>
+        <p>Learned expression codes capture far more than FLAME, down to the tongue and mouth interior, but they also leak
+          the viewpoint of the <span class="cam cam-drv">driving camera</span>. A small disentangler splits X-NeMo codes into expression and camera parts, and a translator
+          maps the expression part into WAN-Animate's expression space with a neutral camera code.</p>
+      </article>
+    </div>
+    <div class="distract">
+      <div class="distract-text">
+        <h3>DISTRACT: are expression codes view-invariant?</h3>
+        <p>Our DISTRACT benchmark asks an encoder to retrieve the same expression seen from another camera, among
+          distractors with other expressions. Learned expression spaces reach only 8&ndash;21% rank-1 accuracy, below the
+          FLAME-based DECA: the observed viewpoint dominates their latent space. A small MLP probe on the frozen codes lifts
+          them to 90&ndash;98%, so the expression is in the code, entangled with the viewpoint. X-NeMo reaches the highest
+          accuracy after the probe, which motivates our use of X-NeMo codes; our disentangler removes the entanglement.</p>
+        <div class="seg seg-small" role="radiogroup" aria-label="Codes">
+          <button class="seg-btn" type="button" role="radio" aria-checked="true" data-mode="raw">Raw codes</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-mode="probe">With MLP probe</button>
+        </div>
+      </div>
+      <figure class="chart" data-mode="raw" aria-label="Rank-1 retrieval accuracy on DISTRACT">
+        <div class="chart-axis" aria-hidden="true"><span></span><span class="ticks"><i>0</i><i>25</i><i>50</i><i>75</i><i>100%</i></span><span></span></div>
+        <div class="bar-group">FLAME parameters</div><div class="bar-row"><span class="bar-name">DECA</span><span class="bar-track"><span class="bar-probe" style="--v:85"></span><span class="bar-raw" style="--v:61"></span></span><span class="bar-val"><span class="v-raw">61%</span><span class="v-probe">61% &rarr; 85%</span></span></div><div class="bar-group">Learned expression spaces</div><div class="bar-row"><span class="bar-name">PD-FGC</span><span class="bar-track"><span class="bar-probe" style="--v:90"></span><span class="bar-raw" style="--v:8"></span></span><span class="bar-val"><span class="v-raw">8%</span><span class="v-probe">8% &rarr; 90%</span></span></div><div class="bar-row"><span class="bar-name">WAN-Animate</span><span class="bar-track"><span class="bar-probe" style="--v:94"></span><span class="bar-raw" style="--v:21"></span></span><span class="bar-val"><span class="v-raw">21%</span><span class="v-probe">21% &rarr; 94%</span></span></div><div class="bar-row is-ours"><span class="bar-name">X-NeMo</span><span class="bar-track"><span class="bar-probe" style="--v:98"></span><span class="bar-raw" style="--v:18"></span></span><span class="bar-val"><span class="v-raw">18%</span><span class="v-probe">18% &rarr; 98%</span></span></div>
+        <figcaption>Rank-1 retrieval accuracy on the DISTRACT view-invariance task.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+<section class="sec mist" id="compare">
+  <div class="wrap">
+    <header class="sec-head"><h2>Comparison with the state of the art</h2>
+      <p>Pick a task and a baseline, then drag the divider.</p></header>
+    <div class="seg cmp-tasks" role="tablist" aria-label="Task"><button class="seg-btn" type="button" role="tab" aria-selected="true" data-task="0">Self-reenactment · BecomingLit</button><button class="seg-btn" type="button" role="tab" aria-selected="false" data-task="1">Cross-reenactment · BecomingLit</button><button class="seg-btn" type="button" role="tab" aria-selected="false" data-task="2">In-the-wild photos</button></div>
+    <p class="cmp-desc">Held-out dataset (BecomingLit). The model sees the reference image from the reference camera and the driving video from the driving camera, and renders the target camera, which provides the ground truth.</p>
+    <div class="cmp" id="cmp">
+      <div class="cmp-side">
+        <div class="cmp-cases" role="tablist" aria-label="Subject"><button class="case" type="button" role="tab" aria-selected="true" data-case="0"><img src="static/compare/bl_self/1004_case1_FREE/ref.jpg" alt="" width="64" height="80" loading="lazy"><span>Subject 1004 · free performance</span></button><button class="case" type="button" role="tab" aria-selected="false" data-case="1"><img src="static/compare/bl_self/1058_case1_EXP-3/ref.jpg" alt="" width="64" height="80" loading="lazy"><span>Subject 1058 · expressions</span></button><button class="case" type="button" role="tab" aria-selected="false" data-case="2"><img src="static/compare/bl_self/1062_case1_EMOTIONS/ref.jpg" alt="" width="64" height="80" loading="lazy"><span>Subject 1062 · emotions</span></button><button class="case" type="button" role="tab" aria-selected="false" data-case="3"><img src="static/compare/bl_self/1061_case0_EXP-1/ref.jpg" alt="" width="64" height="80" loading="lazy"><span>Subject 1061 · expressions</span></button></div>
+        <div class="cmp-inputs">
+          <figure><img class="cmp-ref" src="static/compare/bl_self/1004_case1_FREE/ref.jpg" width="320" height="400" alt="Input photo" loading="lazy"><figcaption>Input photo</figcaption></figure>
+          <figure class="in-driving"><video class="cmp-drv" muted loop playsinline preload="none" width="320" height="400" aria-label="Driving video"></video><figcaption>Driving video</figcaption></figure>
+          <figure class="in-driver_target" hidden><video class="cmp-drvt" muted loop playsinline preload="none" width="320" height="400" aria-label="Driver seen from the target camera"></video><figcaption>Driver, target view</figcaption></figure>
+        </div>
+      </div>
+      <div class="cmp-main">
+        <div class="cmp-stage" style="--x:50%; aspect-ratio:640 / 800">
+          <canvas class="cmp-canvas" width="640" height="800" role="img" aria-label="Baseline on the left of the divider, Ours on the right"></canvas>
+          <video class="cmp-src" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
+          <div class="cmp-divider" role="slider" tabindex="0" aria-label="Divider position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><span class="knob" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+          <span class="cmp-tag left">CAP4D</span><span class="cmp-tag right">Ours</span>
+        </div>
+        <div class="seg seg-small cmp-methods" role="radiogroup" aria-label="Compare Ours with"><button class="seg-btn" type="button" role="radio" aria-checked="false" data-method="lam">LAM</button><button class="seg-btn" type="button" role="radio" aria-checked="false" data-method="flexavatar">FlexAvatar</button><button class="seg-btn" type="button" role="radio" aria-checked="false" data-method="uika">UIKA</button><button class="seg-btn" type="button" role="radio" aria-checked="false" data-method="mmdm">MMDM</button><button class="seg-btn" type="button" role="radio" aria-checked="false" data-method="mmvdm">MMVDM</button><button class="seg-btn" type="button" role="radio" aria-checked="true" data-method="cap4d">CAP4D</button><button class="seg-btn is-gt" type="button" role="radio" aria-checked="false" data-method="gt">Ground truth</button></div>
+      </div>
+    </div>
+    <script type="application/json" id="cmp-data">[{"key": "bl_self", "tab": "Self-reenactment \u00b7 BecomingLit", "text": "Held-out dataset (BecomingLit). The model sees the reference image from the reference camera and the driving video from the driving camera, and renders the target camera, which provides the ground truth.", "fps": 24, "w": 640, "h": 800, "pills": [{"key": "lam", "label": "LAM"}, {"key": "flexavatar", "label": "FlexAvatar"}, {"key": "uika", "label": "UIKA"}, {"key": "mmdm", "label": "MMDM"}, {"key": "mmvdm", "label": "MMVDM"}, {"key": "cap4d", "label": "CAP4D"}, {"key": "gt", "label": "Ground truth"}], "default": "cap4d", "cases": [{"id": "1004_case1_FREE", "label": "Subject 1004 \u00b7 free performance", "dir": "static/compare/bl_self/1004_case1_FREE", "ref": "static/compare/bl_self/1004_case1_FREE/ref.jpg", "driving": "static/compare/bl_self/1004_case1_FREE/driving.mp4", "poster_frame": 36, "crop": [0.1098, 0.3429, 0.7229, 0.6197], "packed": {"src": "static/compare/bl_self/1004_case1_FREE/packed.mp4", "cols": 4, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "lam", "flexavatar", "uika", "mmdm", "mmvdm", "cap4d", "gt"], "frames": 77}}, {"id": "1058_case1_EXP-3", "label": "Subject 1058 \u00b7 expressions", "dir": "static/compare/bl_self/1058_case1_EXP-3", "ref": "static/compare/bl_self/1058_case1_EXP-3/ref.jpg", "driving": "static/compare/bl_self/1058_case1_EXP-3/driving.mp4", "poster_frame": 34, "crop": [0.1109, 0.3229, 0.5982, 0.5128], "packed": {"src": "static/compare/bl_self/1058_case1_EXP-3/packed.mp4", "cols": 4, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "lam", "flexavatar", "uika", "mmdm", "mmvdm", "cap4d", "gt"], "frames": 77}}, {"id": "1062_case1_EMOTIONS", "label": "Subject 1062 \u00b7 emotions", "dir": "static/compare/bl_self/1062_case1_EMOTIONS", "ref": "static/compare/bl_self/1062_case1_EMOTIONS/ref.jpg", "driving": "static/compare/bl_self/1062_case1_EMOTIONS/driving.mp4", "poster_frame": 6, "crop": [0.1582, 0.2731, 0.5509, 0.4723], "packed": {"src": "static/compare/bl_self/1062_case1_EMOTIONS/packed.mp4", "cols": 4, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "lam", "flexavatar", "uika", "mmdm", "mmvdm", "cap4d", "gt"], "frames": 77}}, {"id": "1061_case0_EXP-1", "label": "Subject 1061 \u00b7 expressions", "dir": "static/compare/bl_self/1061_case0_EXP-1", "ref": "static/compare/bl_self/1061_case0_EXP-1/ref.jpg", "driving": "static/compare/bl_self/1061_case0_EXP-1/driving.mp4", "poster_frame": 38, "crop": [0.1935, 0.2431, 0.6095, 0.5224], "packed": {"src": "static/compare/bl_self/1061_case0_EXP-1/packed.mp4", "cols": 4, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "lam", "flexavatar", "uika", "mmdm", "mmvdm", "cap4d", "gt"], "frames": 77}}]}, {"key": "bl_cross", "tab": "Cross-reenactment \u00b7 BecomingLit", "text": "Held-out dataset (BecomingLit). Another subject's driving video, seen from the driving camera, animates the reference image, rendered from the target camera. There is no ground truth.", "fps": 24, "w": 640, "h": 800, "pills": [{"key": "lam", "label": "LAM"}, {"key": "flexavatar", "label": "FlexAvatar"}, {"key": "uika", "label": "UIKA"}, {"key": "mmdm", "label": "MMDM"}, {"key": "mmvdm", "label": "MMVDM"}, {"key": "cap4d", "label": "CAP4D"}], "default": "cap4d", "cases": [{"id": "1021_case1_EMOTIONS__ref1022", "label": "1021 drives 1022", "dir": "static/compare/bl_cross/1021_case1_EMOTIONS__ref1022", "ref": "static/compare/bl_cross/1021_case1_EMOTIONS__ref1022/ref.jpg", "driving": "static/compare/bl_cross/1021_case1_EMOTIONS__ref1022/driving.mp4", "poster_frame": 8, "crop": [0.1265, 0.2132, 0.6298, 0.5399], "driver_target": "static/compare/bl_cross/1021_case1_EMOTIONS__ref1022/driver_target.mp4", "packed": {"src": "static/compare/bl_cross/1021_case1_EMOTIONS__ref1022/packed.mp4", "cols": 4, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "lam", "flexavatar", "uika", "mmdm", "mmvdm", "cap4d"], "frames": 77}}, {"id": "1004_case1_FREE__ref1010", "label": "1004 drives 1010", "dir": "static/compare/bl_cross/1004_case1_FREE__ref1010", "ref": "static/compare/bl_cross/1004_case1_FREE__ref1010/ref.jpg", "driving": "static/compare/bl_cross/1004_case1_FREE__ref1010/driving.mp4", "poster_frame": 8, "crop": [0.1884, 0.3529, 0.7025, 0.6022], "driver_target": "static/compare/bl_cross/1004_case1_FREE__ref1010/driver_target.mp4", "packed": {"src": "static/compare/bl_cross/1004_case1_FREE__ref1010/packed.mp4", "cols": 4, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "lam", "flexavatar", "uika", "mmdm", "mmvdm", "cap4d"], "frames": 77}}, {"id": "1062_case1_EMOTIONS__ref1001", "label": "1062 drives 1001", "dir": "static/compare/bl_cross/1062_case1_EMOTIONS__ref1001", "ref": "static/compare/bl_cross/1062_case1_EMOTIONS__ref1001/ref.jpg", "driving": "static/compare/bl_cross/1062_case1_EMOTIONS__ref1001/driving.mp4", "poster_frame": 8, "crop": [0.1144, 0.2357, 0.5949, 0.51], "driver_target": "static/compare/bl_cross/1062_case1_EMOTIONS__ref1001/driver_target.mp4", "packed": {"src": "static/compare/bl_cross/1062_case1_EMOTIONS__ref1001/packed.mp4", "cols": 4, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "lam", "flexavatar", "uika", "mmdm", "mmvdm", "cap4d"], "frames": 77}}, {"id": "1022_case1_EXP-2__ref1024", "label": "1022 drives 1024", "dir": "static/compare/bl_cross/1022_case1_EXP-2__ref1024", "ref": "static/compare/bl_cross/1022_case1_EXP-2__ref1024/ref.jpg", "driving": "static/compare/bl_cross/1022_case1_EXP-2__ref1024/driving.mp4", "poster_frame": 11, "crop": [0.1481, 0.2382, 0.5775, 0.495], "driver_target": "static/compare/bl_cross/1022_case1_EXP-2__ref1024/driver_target.mp4", "packed": {"src": "static/compare/bl_cross/1022_case1_EXP-2__ref1024/packed.mp4", "cols": 4, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "lam", "flexavatar", "uika", "mmdm", "mmvdm", "cap4d"], "frames": 77}}]}, {"key": "itw", "tab": "In-the-wild photos", "text": "In-the-wild reference images, driven by a NeRSemble performance while the target camera sweeps around the head. Each crop follows the method's own face track, so the faces line up.", "fps": 24, "w": 640, "h": 800, "pills": [{"key": "flexavatar", "label": "FlexAvatar"}, {"key": "mmdm", "label": "MMDM"}, {"key": "mmvdm", "label": "MMVDM"}], "default": "mmvdm", "cases": [{"id": "pool_goggles", "label": "Pool goggles", "dir": "static/compare/itw/pool_goggles", "ref": "static/compare/itw/pool_goggles/ref.jpg", "frames": 77, "poster_frame": 34, "driving": "static/compare/itw/pool_goggles/driving.mp4", "driving_label": "Driving video", "packed": {"src": "static/compare/itw/pool_goggles/packed.mp4", "cols": 2, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "flexavatar", "mmdm", "mmvdm"], "frames": 77}}, {"id": "straw_hat", "label": "Straw hat, neck motion", "dir": "static/compare/itw/straw_hat", "ref": "static/compare/itw/straw_hat/ref.jpg", "frames": 69, "poster_frame": 31, "driving": "static/compare/itw/straw_hat/driving.mp4", "driving_label": "Proxy mesh", "packed": {"src": "static/compare/itw/straw_hat/packed.mp4", "cols": 2, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "flexavatar", "mmdm", "mmvdm"], "frames": 69}}, {"id": "navi", "label": "Na'vi", "dir": "static/compare/itw/navi", "ref": "static/compare/itw/navi/ref.jpg", "frames": 77, "poster_frame": 34, "driving": "static/compare/itw/navi/driving.mp4", "driving_label": "Driving video", "packed": {"src": "static/compare/itw/navi/packed.mp4", "cols": 2, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "flexavatar", "mmdm", "mmvdm"], "frames": 77}}, {"id": "glasses", "label": "Glasses", "dir": "static/compare/itw/glasses", "ref": "static/compare/itw/glasses/ref.jpg", "frames": 77, "poster_frame": 34, "driving": "static/compare/itw/glasses/driving.mp4", "driving_label": "Driving video", "packed": {"src": "static/compare/itw/glasses/packed.mp4", "cols": 2, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "flexavatar", "mmdm", "mmvdm"], "frames": 77}}, {"id": "cartoon_portrait", "label": "Cartoon portrait", "dir": "static/compare/itw/cartoon_portrait", "ref": "static/compare/itw/cartoon_portrait/ref.jpg", "frames": 77, "poster_frame": 34, "driving": "static/compare/itw/cartoon_portrait/driving.mp4", "driving_label": "Driving video", "packed": {"src": "static/compare/itw/cartoon_portrait/packed.mp4", "cols": 2, "rows": 2, "tw": 640, "th": 800, "order": ["ours", "flexavatar", "mmdm", "mmvdm"], "frames": 77}}]}]</script>
+  </div>
+</section>
+<section class="sec" id="orbit">
+  <div class="wrap">
+    <header class="sec-head"><h2>Full 360&deg; orbits</h2>
+      <p>Our model renders plausible views all around the head, far beyond the viewpoints in its training data. Drag images to orbit
+        around the head.</p></header>
+    <div class="orb" id="orb">
+      <div class="orb-side">
+        <div class="cmp-cases" role="tablist" aria-label="Subject"><button class="case" type="button" role="tab" aria-selected="true" data-name="red_bangs"><img src="static/orbit/red_bangs_ref.jpg" alt="" width="64" height="80" loading="lazy"><span>Red bangs</span></button><button class="case" type="button" role="tab" aria-selected="false" data-name="cartoon_grandma"><img src="static/orbit/cartoon_grandma_ref.jpg" alt="" width="64" height="80" loading="lazy"><span>Cartoon grandma</span></button></div>
+        <div class="seg seg-small seg-col" role="radiogroup" aria-label="Compare Ours with"><button class="seg-btn" type="button" role="radio" aria-checked="true" data-method="flexavatar">FlexAvatar</button><button class="seg-btn" type="button" role="radio" aria-checked="false" data-method="facecam">FaceCam</button><button class="seg-btn" type="button" role="radio" aria-checked="false" data-method="mvp4d">MMVDM</button></div>
+      </div>
+      <div class="orb-stage" tabindex="0" aria-label="Drag or use the arrow keys to orbit the camera">
+        <figure><canvas class="orb-base" style="aspect-ratio:320 / 400"></canvas><figcaption class="orb-base-label">FlexAvatar</figcaption></figure>
+        <figure><canvas class="orb-ours" style="aspect-ratio:320 / 400"></canvas><figcaption>Ours</figcaption></figure>
+      </div>
+      <div class="orb-readout"><svg class="dial" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".35"/><line class="dial-hand" x1="20" y1="20" x2="20" y2="5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        <span class="mono az">0&deg;</span><span class="hint">azimuth &middot; drag to orbit</span></div>
+    </div>
+    <script type="application/json" id="orb-data">{"frames": 72, "deg": 5, "cols": 12, "rows": 6, "fw": 320, "fh": 400, "methods": [{"key": "ours", "label": "Ours"}, {"key": "flexavatar", "label": "FlexAvatar"}, {"key": "facecam", "label": "FaceCam"}, {"key": "mvp4d", "label": "MMVDM"}], "names": [{"key": "red_bangs", "label": "Red bangs", "ref": "static/orbit/red_bangs_ref.jpg", "sheets": {"ours": "static/orbit/red_bangs__ours.jpg", "flexavatar": "static/orbit/red_bangs__flexavatar.jpg", "facecam": "static/orbit/red_bangs__facecam.jpg", "mvp4d": "static/orbit/red_bangs__mvp4d.jpg"}}, {"key": "cartoon_grandma", "label": "Cartoon grandma", "ref": "static/orbit/cartoon_grandma_ref.jpg", "sheets": {"ours": "static/orbit/cartoon_grandma__ours.jpg", "flexavatar": "static/orbit/cartoon_grandma__flexavatar.jpg", "facecam": "static/orbit/cartoon_grandma__facecam.jpg", "mvp4d": "static/orbit/cartoon_grandma__mvp4d.jpg"}}]}</script>
+  </div>
+</section>
+<section class="sec night" id="long">
+  <div class="wrap">
+    <header class="sec-head"><h2>Fast inference and long-term consistency</h2>
+      <p>We distill VDA into an autoregressive few-step VDM with a Self-Forcing-inspired strategy. As a result, the avatars
+        stay consistent for thousands of frames and generate at 4.8 frames per second at a resolution of
+        288&times;512 pixels. One driving video and one camera sweep animate ten identities.</p></header>
+    <div class="long-scroll"><div class="long-stage" data-frames="1029" data-fps="24">
+      <video class="long-video" data-src="static/long/grid.mp4" data-poster="static/long/grid.jpg" width="1316" height="772" muted loop playsinline preload="none" aria-label="Ten identities driven by one long video"></video>
+      <span class="cell-label" style="left:0.000%;top:49.741%">Driving video</span><span class="cell-label" style="left:0.000%;top:100.000%">Proxy mesh</span>
+    </div></div>
+    <div class="long-hud"><span class="long-bar"><span></span></span><span class="mono frame">frame 1 / 1029</span></div>
+  </div>
+</section>
+<section class="sec" id="video">
+  <div class="wrap narrow">
+    <header class="sec-head"><h2>Video</h2></header>
+    <div class="yt"><iframe src="https://www.youtube-nocookie.com/embed/TODO" title="Narrated overview video" loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
+  </div>
+</section>
+<section class="sec mist" id="bibtex">
+  <div class="wrap narrow">
+    <header class="sec-head"><h2>BibTeX</h2></header>
+    <div class="bib"><pre id="bib">@article{giebenhain2026vda,
+  title   = {Video Diffusion Avatars: Taming Video Diffusion Models into Controllable 3D Avatars},
+  author  = {Giebenhain, Simon and Kirschstein, Tobias and Schoneveld, Liam and
+             Davoli, Davide and Chen, Zhe and Nie{\ss}ner, Matthias},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</pre><button class="copy" id="copy-bib" type="button">Copy</button></div>
+  </div>
+</section>
+<footer class="foot"><div class="wrap">Video Diffusion Avatars &middot; Technical University of Munich &middot; Woven by Toyota &middot; Toyota Motor Europe</div></footer></main>
+<script type="application/json" id="renditions">{"static/compare/bl_cross/1004_case1_FREE__ref1010/driver_target.mp4": {"av1": true, "m": false}, "static/compare/bl_cross/1004_case1_FREE__ref1010/driving.mp4": {"av1": true, "m": false}, "static/compare/bl_cross/1004_case1_FREE__ref1010/packed.mp4": {"av1": true, "m": true}, "static/compare/bl_cross/1021_case1_EMOTIONS__ref1022/driver_target.mp4": {"av1": true, "m": false}, "static/compare/bl_cross/1021_case1_EMOTIONS__ref1022/driving.mp4": {"av1": true, "m": false}, "static/compare/bl_cross/1021_case1_EMOTIONS__ref1022/packed.mp4": {"av1": true, "m": true}, "static/compare/bl_cross/1022_case1_EXP-2__ref1024/driver_target.mp4": {"av1": true, "m": false}, "static/compare/bl_cross/1022_case1_EXP-2__ref1024/driving.mp4": {"av1": true, "m": false}, "static/compare/bl_cross/1022_case1_EXP-2__ref1024/packed.mp4": {"av1": true, "m": true}, "static/compare/bl_cross/1062_case1_EMOTIONS__ref1001/driver_target.mp4": {"av1": true, "m": false}, "static/compare/bl_cross/1062_case1_EMOTIONS__ref1001/driving.mp4": {"av1": true, "m": false}, "static/compare/bl_cross/1062_case1_EMOTIONS__ref1001/packed.mp4": {"av1": true, "m": true}, "static/compare/bl_self/1004_case1_FREE/driving.mp4": {"av1": true, "m": false}, "static/compare/bl_self/1004_case1_FREE/packed.mp4": {"av1": true, "m": true}, "static/compare/bl_self/1058_case1_EXP-3/driving.mp4": {"av1": true, "m": false}, "static/compare/bl_self/1058_case1_EXP-3/packed.mp4": {"av1": true, "m": true}, "static/compare/bl_self/1061_case0_EXP-1/driving.mp4": {"av1": true, "m": false}, "static/compare/bl_self/1061_case0_EXP-1/packed.mp4": {"av1": true, "m": true}, "static/compare/bl_self/1062_case1_EMOTIONS/driving.mp4": {"av1": true, "m": false}, "static/compare/bl_self/1062_case1_EMOTIONS/packed.mp4": {"av1": true, "m": true}, "static/compare/itw/cartoon_portrait/driving.mp4": {"av1": true, "m": false}, "static/compare/itw/cartoon_portrait/packed.mp4": {"av1": true, "m": true}, "static/compare/itw/glasses/driving.mp4": {"av1": true, "m": false}, "static/compare/itw/glasses/packed.mp4": {"av1": true, "m": true}, "static/compare/itw/straw_hat/driving.mp4": {"av1": true, "m": false}, "static/compare/itw/straw_hat/packed.mp4": {"av1": true, "m": true}, "static/compare/itw/pool_goggles/driving.mp4": {"av1": true, "m": false}, "static/compare/itw/pool_goggles/packed.mp4": {"av1": true, "m": true}, "static/compare/itw/navi/driving.mp4": {"av1": true, "m": false}, "static/compare/itw/navi/packed.mp4": {"av1": true, "m": true}, "static/controls/camera_1.mp4": {"av1": true, "m": false}, "static/controls/camera_1_cond.mp4": {"av1": true, "m": false}, "static/controls/camera_2.mp4": {"av1": true, "m": false}, "static/controls/camera_2_cond.mp4": {"av1": true, "m": false}, "static/controls/camera_3.mp4": {"av1": true, "m": false}, "static/controls/camera_3_cond.mp4": {"av1": true, "m": false}, "static/controls/camera_4.mp4": {"av1": true, "m": false}, "static/controls/camera_4_cond.mp4": {"av1": true, "m": false}, "static/controls/expr_1.mp4": {"av1": true, "m": false}, "static/controls/expr_1_cond.mp4": {"av1": true, "m": false}, "static/controls/expr_2.mp4": {"av1": true, "m": false}, "static/controls/expr_2_cond.mp4": {"av1": true, "m": false}, "static/controls/expr_3.mp4": {"av1": true, "m": false}, "static/controls/expr_3_cond.mp4": {"av1": true, "m": false}, "static/controls/expr_4.mp4": {"av1": true, "m": false}, "static/controls/expr_4_cond.mp4": {"av1": true, "m": false}, "static/controls/neck_1.mp4": {"av1": true, "m": false}, "static/controls/neck_1_cond.mp4": {"av1": true, "m": false}, "static/controls/neck_2.mp4": {"av1": true, "m": false}, "static/controls/neck_2_cond.mp4": {"av1": true, "m": false}, "static/controls/neck_3.mp4": {"av1": true, "m": false}, "static/controls/neck_3_cond.mp4": {"av1": true, "m": false}, "static/controls/neck_4.mp4": {"av1": true, "m": false}, "static/controls/neck_4_cond.mp4": {"av1": true, "m": false}, "static/hero/cartoon.mp4": {"av1": true, "m": false}, "static/hero/gele.mp4": {"av1": true, "m": false}, "static/hero/greenhair.mp4": {"av1": true, "m": false}, "static/hero/hijab.mp4": {"av1": true, "m": false}, "static/hero/japanese_grandma.mp4": {"av1": true, "m": false}, "static/hero/swimmer.mp4": {"av1": true, "m": false}, "static/hero/vangogh.mp4": {"av1": true, "m": false}, "static/long/grid.mp4": {"av1": true, "m": true}}</script>
+<script>(function () {
+  'use strict';
+  var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function each(list, fn) { for (var i = 0; i < list.length; i++) { fn(list[i], i); } }
+  // ---- delivery: data saver / slow network -> no autoplay (tap to play) and the small files; phones -> half-size files;
+  // AV1 where the browser decodes it, H.264 otherwise
+  var conn = navigator.connection || {};
+  var lite = !!(conn.saveData || /(^|-)(2g|3g)$/.test(conn.effectiveType || ''));
+  var small = Math.min(window.innerWidth || 1e9, (window.screen && screen.width) || 1e9) <= 820;
+  var probe = document.createElement('video');
+  var av1 = !!(probe.canPlayType && probe.canPlayType('video/mp4; codecs="av01.0.05M.08"') === 'probably');
+  var REND = {};
+  try { REND = JSON.parse(document.getElementById('renditions').textContent) || {}; } catch (e) {}
+  function pick(src) {
+    var r = REND[src]; if (!r) { return src; }
+    return src.replace(/\.mp4$/, '') + (r.m && (small || lite) ? '.m' : '') + (r.av1 && av1 ? '.av1' : '') + '.mp4';
+  }
+  var autoplay = !reduce && !lite;
+  function load(v) { if (!v.getAttribute('src') && v.dataset.src) { v.src = pick(v.dataset.src); } }
+  function play(v) { if (!autoplay && !v._user) { return; } var p = v.play(); if (p && p.catch) { p.catch(function () {}); } }
+  function showPosters(root) {
+    each(root.matches && root.matches('[data-poster]') ? [root] : $$('[data-poster]', root), function (v) {
+      v.poster = v.getAttribute('data-poster'); v.removeAttribute('data-poster');
+    });
+  }
+
+  // ------------------------------------------------------------------ playback follows visibility
+  // A "unit" plays its videos together while on screen. In a synced unit (data-sync) the first video leads
+  // and the others are pulled back to its clock whenever they drift.
+  var synced = [];
+  function startUnit(u) {
+    var vids = $$('video', u);
+    each(vids, load);
+    if (u.hasAttribute('data-sync') && !u._started) {
+      u._started = true;
+      each(vids, function (v) { try { v.currentTime = 0; } catch (e) {} });
+      synced.push(vids);
+    }
+    each(vids, play);
+  }
+  function stopUnit(u) { each($$('video', u), function (v) { if (!v.paused) { v.pause(); } }); }
+  var units = $$('.tile, .ctrl-card, .triplet, .long-stage');
+  if ('IntersectionObserver' in window) {
+    // one screen ahead: posters + start downloading; on screen: play; off screen: pause
+    var near = new IntersectionObserver(function (es) {
+      each(es, function (e) {
+        if (!e.isIntersecting) { return; }
+        showPosters(e.target);
+        each($$('video[data-src]', e.target), function (v) { load(v); v.preload = 'auto'; });
+        near.unobserve(e.target);
+      });
+    }, { rootMargin: '100% 0px' });
+    each(units.concat($$('.feature-video')), function (u) { near.observe(u); });
+    var io = new IntersectionObserver(function (es) {
+      each(es, function (e) { if (e.isIntersecting) { startUnit(e.target); } else { stopUnit(e.target); } });
+    }, { threshold: 0.15 });
+    each(units, function (u) { io.observe(u); });
+  } else {
+    each(units, function (u) { showPosters(u); startUnit(u); });
+  }
+  if (!autoplay) {                                   // tap a clip to play it (and its synced partners)
+    each(units, function (u) {
+      u.addEventListener('click', function () { each($$('video', u), function (v) { v._user = true; load(v); play(v); }); });
+      u.title = 'Tap to play';
+    });
+  }
+  function syncGroup(vids) {
+    var lead = vids[0];
+    if (lead.paused || lead.readyState < 2 || !lead.duration) { return; }
+    for (var i = 1; i < vids.length; i++) {
+      var f = vids[i];
+      if (!f.getAttribute('src') || f.readyState < 2) { continue; }
+      var d = f.currentTime - lead.currentTime;
+      if (Math.abs(d) > 0.06 && Math.abs(d) < lead.duration - 0.25) { f.currentTime = lead.currentTime; }
+      if (f.paused) { play(f); }
+    }
+  }
+  setInterval(function () { each(synced, syncGroup); }, 250);
+
+  // ------------------------------------------------------------------ top bar
+  (function () {            // own scope: widgets reuse helper names (draw, onFrame, ...)
+  var nav = $('.topnav'), hero = $('.hero');
+  if (nav && hero && 'IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) {
+      nav.classList.toggle('show', !es[0].isIntersecting);
+    }, { threshold: 0, rootMargin: '-64px 0px 0px 0px' }).observe(hero);
+  }
+  })();
+
+  // ------------------------------------------------------------------ tabs (controls)
+  (function () {            // own scope: widgets reuse helper names (draw, onFrame, ...)
+  each($$('#controls [role="tab"]'), function (tab, i, all) {
+    tab.addEventListener('click', function () {
+      each($$('#controls [role="tab"]'), function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        var panel = document.getElementById(t.getAttribute('aria-controls'));
+        if (panel) { panel.hidden = !on; }
+      });
+    });
+  });
+  })();
+
+  // ------------------------------------------------------------------ DISTRACT chart
+  (function () {            // own scope: widgets reuse helper names (draw, onFrame, ...)
+  var chart = $('.chart');
+  each($$('.distract [data-mode]'), function (b) {
+    b.addEventListener('click', function () {
+      chart.setAttribute('data-mode', b.getAttribute('data-mode'));
+      each($$('.distract [data-mode]'), function (o) { o.setAttribute('aria-checked', o === b ? 'true' : 'false'); });
+    });
+  });
+  })();
+
+  // ------------------------------------------------------------------ shared: horizontal drag on an element
+  function dragX(el, onMove, onStart) {
+    var active = false;
+    el.addEventListener('pointerdown', function (e) {
+      if (e.button !== undefined && e.button !== 0) { return; }
+      active = true; el.setPointerCapture(e.pointerId); el.classList.add('dragging');
+      if (onStart) { onStart(e); }
+      onMove(e, true);
+    });
+    el.addEventListener('pointermove', function (e) { if (active) { onMove(e, false); } });
+    var end = function () { active = false; el.classList.remove('dragging'); };
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  }
+
+  // ------------------------------------------------------------------ comparison: tasks x subjects x baselines, split slider
+  (function () {            // own scope: widgets reuse helper names (draw, onFrame, ...)
+  // Every case is ONE packed video (all methods tiled). A canvas draws the Ours tile, then the chosen baseline's tile
+  // left of the divider, from the same frame: switching baselines is instant and the two sides cannot drift apart.
+  var cmpEl = $('#cmp'), cmpDataEl = $('#cmp-data');
+  if (cmpEl && cmpDataEl) {
+    var T = JSON.parse(cmpDataEl.textContent);
+    var sec = $('#compare'), stage = $('.cmp-stage', cmpEl), divider = $('.cmp-divider', cmpEl);
+    var canvas = $('.cmp-canvas', cmpEl), ctx = canvas.getContext('2d'), vSrc = $('.cmp-src', cmpEl);
+    var vDrv = $('.cmp-drv', cmpEl), vDrvT = $('.cmp-drvt', cmpEl);
+    var refImg = $('.cmp-ref', cmpEl), tagL = $('.cmp-tag.left', cmpEl), desc = $('.cmp-desc', sec);
+    var casesEl = $('.cmp-cases', cmpEl), pillsEl = $('.cmp-methods', cmpEl);
+    var st = { t: 0, c: 0, m: T[0].default, on: false, x: 0.5 };
+    var group = [vSrc, vDrv, vDrvT];
+    var task = function () { return T[st.t]; };
+    var cas = function () { return task().cases[st.c]; };
+    var label = function (key) { var p = task().pills; for (var i = 0; i < p.length; i++) { if (p[i].key === key) { return p[i].label; } } return key; };
+    var esc = function (x) { return String(x).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
+    var tile = function (key) {                       // in source pixels of whichever rendition loaded (full or half size)
+      var p = cas().packed, i = Math.max(0, p.order.indexOf(key));
+      var k = vSrc.videoWidth ? vSrc.videoWidth / (p.cols * p.tw) : 1;
+      return { x: (i % p.cols) * p.tw * k, y: Math.floor(i / p.cols) * p.th * k, w: p.tw * k, h: p.th * k };
+    };
+    var prefetched = {};
+    var prefetchNext = function () {                  // fetch the next subject's clip in idle time
+      if (lite) { return; }
+      var t = task(), nx = t.cases[(st.c + 1) % t.cases.length], url = pick(nx.packed.src);
+      if (prefetched[url]) { return; }
+      prefetched[url] = 1;
+      var l = document.createElement('link'); l.rel = 'prefetch'; l.href = url; l.as = 'video'; document.head.appendChild(l);
+    };
+    vSrc.addEventListener('canplaythrough', prefetchNext);
+    var draw = function () {
+      if (vSrc.readyState < 2) { return; }
+      var cw = canvas.width, ch = canvas.height, o = tile('ours'), b = tile(st.m);
+      ctx.drawImage(vSrc, o.x, o.y, o.w, o.h, 0, 0, cw, ch);
+      var xw = Math.round(cw * st.x);
+      if (xw > 0) { ctx.drawImage(vSrc, b.x, b.y, b.w * xw / cw, b.h, 0, 0, xw, ch); }
+    };
+    // redraw on every animation frame while the clip plays and the widget is on screen (frame callbacks may not
+    // fire for an invisible source video in every browser)
+    var loop = function () { if (st.vis && !vSrc.paused) { draw(); } requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+    vSrc.addEventListener('loadeddata', draw);
+    vSrc.addEventListener('canplay', draw);
+    vSrc.addEventListener('seeked', draw);
+    var setInput = function (v, key) {
+      var c = cas(), fig = v.parentNode, cap = fig.querySelector('figcaption');
+      fig.hidden = !c[key];
+      if (cap && cap.dataset.base === undefined) { cap.dataset.base = cap.textContent; }
+      if (cap) { cap.textContent = c[key + '_label'] || cap.dataset.base; }
+      if (!c[key]) { v.removeAttribute('src'); v.load(); return; }
+      if (st.on) { v.src = pick(c[key]); }
+    };
+    var loadCase = function () {
+      var c = cas();
+      stage.style.backgroundImage = "url('" + c.dir + "/ours.jpg')";
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      refImg.src = c.ref;
+      if (st.on) { vSrc.src = pick(c.packed.src); }
+      setInput(vDrv, 'driving'); setInput(vDrvT, 'driver_target');
+      each(group, function (v) { if (v.getAttribute('src')) { try { v.currentTime = 0; } catch (e) {} if (st.on) { play(v); } } });
+    };
+    var selectOnly = function (list, el, attr) { each(list, function (o) { o.setAttribute(attr, o === el ? 'true' : 'false'); }); };
+    var renderTask = function () {
+      var t = task();
+      desc.textContent = t.text || '';
+      stage.style.aspectRatio = t.w + ' / ' + t.h;
+      canvas.width = t.w; canvas.height = t.h;
+      casesEl.innerHTML = t.cases.map(function (c, k) {
+        return '<button class="case" type="button" role="tab" aria-selected="' + (k === st.c) + '" data-case="' + k + '">' +
+          '<img src="' + esc(c.ref) + '" alt="" width="64" height="80" loading="lazy"><span>' + esc(c.label) + '</span></button>';
+      }).join('');
+      pillsEl.innerHTML = t.pills.map(function (m) {
+        return '<button class="seg-btn' + (m.key === 'gt' ? ' is-gt' : '') + '" type="button" role="radio" aria-checked="' + (m.key === st.m) +
+          '" data-method="' + esc(m.key) + '">' + esc(m.label) + '</button>';
+      }).join('');
+      tagL.textContent = label(st.m);
+      loadCase();
+    };
+    each($$('.cmp-tasks [data-task]', sec), function (b) {
+      b.addEventListener('click', function () {
+        st.t = +b.getAttribute('data-task'); st.c = 0; st.m = task().default;
+        selectOnly($$('.cmp-tasks [data-task]', sec), b, 'aria-selected');
+        renderTask();
+      });
+    });
+    casesEl.addEventListener('click', function (e) {
+      var b = e.target.closest('.case'); if (!b) { return; }
+      st.c = +b.getAttribute('data-case'); selectOnly($$('.case', casesEl), b, 'aria-selected'); loadCase();
+    });
+    pillsEl.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-method]'); if (!b) { return; }
+      st.m = b.getAttribute('data-method'); selectOnly($$('[data-method]', pillsEl), b, 'aria-checked');
+      tagL.textContent = label(st.m); draw();
+    });
+    var setX = function (x) {
+      st.x = Math.max(0, Math.min(1, x));
+      stage.style.setProperty('--x', (st.x * 100).toFixed(2) + '%');
+      divider.setAttribute('aria-valuenow', Math.round(st.x * 100));
+      draw();
+    };
+    dragX(stage, function (e) { var r = stage.getBoundingClientRect(); setX((e.clientX - r.left) / r.width); },
+          function () { each(group, function (v) { v._user = true; if (v.getAttribute('src')) { play(v); } }); });
+    divider.addEventListener('keydown', function (e) {
+      var k = e.key;
+      if (k === 'ArrowLeft' || k === 'ArrowRight') { setX(st.x + (k === 'ArrowLeft' ? -0.05 : 0.05)); e.preventDefault(); }
+      if (k === 'Home') { setX(0); e.preventDefault(); }
+      if (k === 'End') { setX(1); e.preventDefault(); }
+    });
+    new IntersectionObserver(function (es) {
+      st.vis = es[0].isIntersecting;
+      if (st.vis) {
+        if (!st.on) { st.on = true; loadCase(); synced.push(group); } else { each(group, function (v) { if (v.getAttribute('src')) { play(v); } }); }
+      } else if (st.on) { each(group, function (v) { v.pause(); }); }
+    }, { rootMargin: '25% 0px', threshold: 0 }).observe(stage);
+  }
+  })();
+
+  // ------------------------------------------------------------------ 360 orbit: two canvases, one camera
+  (function () {            // own scope: widgets reuse helper names (draw, onFrame, ...)
+  var orbEl = $('#orb'), orbDataEl = $('#orb-data');
+  if (orbEl && orbDataEl) {
+    var O = JSON.parse(orbDataEl.textContent);
+    var cvBase = $('.orb-base', orbEl), cvOurs = $('.orb-ours', orbEl), baseLabel = $('.orb-base-label', orbEl);
+    var azEl = $('.az', orbEl), hand = $('.dial-hand', orbEl), ostage = $('.orb-stage', orbEl);
+    var dir = (O.names[0].ref || '').replace(/[^\/]*$/, '');
+    var obases = O.methods.filter(function (m) { return m.key !== 'ours'; });
+    var os = { name: O.names[0].key, base: obases[0].key, az: 0, auto: !reduce, visible: false, near: false };
+    var sheets = {};
+    var sheet = function (name, method) {
+      var url = dir + name + '__' + method + '.jpg';
+      if (!sheets[url]) {
+        var img = new Image(); img.decoding = 'async';
+        img.onload = function () { img._ok = true; draw(); };
+        img.src = url; sheets[url] = img;
+      }
+      return sheets[url];
+    };
+    var fit = function (cv) {
+      var w = Math.max(1, Math.round(cv.clientWidth * (window.devicePixelRatio || 1)));
+      var h = Math.round(w * O.fh / O.fw);
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    };
+    var paint = function (cv, img, idx) {
+      var ctx = cv.getContext('2d');
+      if (!img || !img._ok) { ctx.clearRect(0, 0, cv.width, cv.height); return; }
+      var sx = (idx % O.cols) * O.fw, sy = Math.floor(idx / O.cols) * O.fh;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, sx, sy, O.fw, O.fh, 0, 0, cv.width, cv.height);
+    };
+    var draw = function () {
+      var idx = ((Math.round(os.az / O.deg) % O.frames) + O.frames) % O.frames;
+      fit(cvBase); fit(cvOurs);
+      paint(cvBase, sheets[dir + os.name + '__' + os.base + '.jpg'], idx);
+      paint(cvOurs, sheets[dir + os.name + '__ours.jpg'], idx);
+      var a = idx * O.deg;
+      azEl.textContent = a + '°';
+      hand.setAttribute('transform', 'rotate(' + a + ' 20 20)');
+    };
+    var prime = function () { sheet(os.name, 'ours'); sheet(os.name, os.base); draw(); };
+    each($$('.case', orbEl), function (b) {
+      b.addEventListener('click', function () {
+        os.name = b.getAttribute('data-name');
+        each($$('.case', orbEl), function (o) { o.setAttribute('aria-selected', o === b ? 'true' : 'false'); });
+        prime();
+      });
+    });
+    each($$('[data-method]', orbEl), function (b) {
+      b.addEventListener('click', function () {
+        os.base = b.getAttribute('data-method');
+        each($$('[data-method]', orbEl), function (o) { o.setAttribute('aria-checked', o === b ? 'true' : 'false'); });
+        baseLabel.textContent = b.textContent;
+        prime();
+      });
+    });
+    var lastX = 0;
+    dragX(ostage, function (e, first) {
+      if (!first) { os.az = (os.az - (e.clientX - lastX) * 0.6 + 3600) % 360; draw(); }
+      lastX = e.clientX;
+    }, function () { os.auto = false; });
+    ostage.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        os.auto = false; os.az = (os.az + (e.key === 'ArrowLeft' ? -O.deg : O.deg) + 360) % 360; draw(); e.preventDefault();
+      }
+    });
+    var tPrev = 0;
+    var tick = function (t) {
+      if (os.visible && os.auto) {
+        if (tPrev) { os.az = (os.az + (t - tPrev) * 0.024) % 360; draw(); }
+        tPrev = t; requestAnimationFrame(tick);
+      } else { tPrev = 0; }
+    };
+    new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting && !os.near) { os.near = true; prime(); }
+    }, { rootMargin: '600px 0px' }).observe(orbEl);
+    new IntersectionObserver(function (es) {
+      var was = os.visible; os.visible = es[0].isIntersecting;
+      if (os.visible && !was) { requestAnimationFrame(tick); }
+    }, { threshold: 0.25 }).observe(ostage);
+    window.addEventListener('resize', function () { if (os.near) { draw(); } });
+  }
+  })();
+
+  // ------------------------------------------------------------------ long videos: frame counter
+  (function () {            // own scope: widgets reuse helper names (draw, onFrame, ...)
+  var ls = $('.long-stage');
+  if (ls) {
+    var lsec = $('#long'), lv = $('video', ls), fr = $('.frame', lsec), bar = $('.long-bar span', lsec);
+    var N = +ls.getAttribute('data-frames'), fps = +ls.getAttribute('data-fps');
+    var upd = function () {
+      var f = Math.min(N, Math.floor(lv.currentTime * fps + 1e-3) + 1);
+      fr.textContent = 'frame ' + f + ' / ' + N;
+      bar.style.width = (100 * f / N).toFixed(2) + '%';
+    };
+    if (lv.requestVideoFrameCallback) {
+      var onFrame = function () { upd(); lv.requestVideoFrameCallback(onFrame); };
+      lv.requestVideoFrameCallback(onFrame);
+    } else { lv.addEventListener('timeupdate', upd); }
+  }
+  })();
+
+  // ------------------------------------------------------------------ BibTeX
+  (function () {            // own scope: widgets reuse helper names (draw, onFrame, ...)
+  var copy = $('#copy-bib');
+  if (copy) {
+    copy.addEventListener('click', function () {
+      var pre = $('#bib');
+      var done = function () { copy.textContent = 'Copied'; setTimeout(function () { copy.textContent = 'Copy'; }, 1600); };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); copy.textContent = 'Selected';
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(pre.textContent).then(done, select); }
+      else { select(); }
+    });
+  }
+  })();
+
+})();
+</script>
+</body>
+</html>
