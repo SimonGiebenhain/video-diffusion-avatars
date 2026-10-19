@@ -60,7 +60,7 @@ def cameras_for(arg, state, T):
     rig = C.Rig.from_state(state)
     spec = C.load_spec(arg)
     n_spec = C.total_frames(spec)
-    if n_spec < T and T > 77:
+    if n_spec < T and 77 / T < 0.9:             # the full model would show less than ~90% of the camera path
         print(f"[vda] note: the camera path ({n_spec} frames) is stretched to the driving's {T} frames, but the full "
               f"model generates only the first 77; add --max_frames 77 to see the whole camera path in one "
               f"full-model clip", flush=True)

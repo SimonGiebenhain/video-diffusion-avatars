@@ -1,6 +1,7 @@
 # video-diffusion-avatars (VDA)
 
 **Video Diffusion Avatars: Taming Video Diffusion Models into Controllable 3D Avatars** ·
+[Paper (arXiv)](https://arxiv.org/abs/2610.23772) ·
 [Project page](https://simongiebenhain.github.io/video-diffusion-avatars/) ·
 [Weights on Hugging Face](https://huggingface.co/SimonGiebenhain/video-diffusion-avatars)
 
@@ -352,7 +353,10 @@ components keep their own licences:
   title   = {Video Diffusion Avatars: Taming Video Diffusion Models into Controllable 3D Avatars},
   author  = {Giebenhain, Simon and Kirschstein, Tobias and Schoneveld, Liam and
              Davoli, Davide and Chen, Zhe and Nie{\ss}ner, Matthias},
-  journal = {arXiv preprint},
+  journal = {arXiv preprint arXiv:2610.23772},
+  eprint  = {2610.23772},
+  archivePrefix = {arXiv},
+  url     = {https://arxiv.org/abs/2610.23772},
   year    = {2026}
 }
 ```
