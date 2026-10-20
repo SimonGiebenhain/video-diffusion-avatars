@@ -302,6 +302,7 @@ WAN-Animate's motion-code space; the proxy render enters through its own patch e
 | `third_party/xnemo_motion_encoder.pth` | 247 MB | your own driving videos (X-NeMo authors' weights) |
 | `base/` | ~37 GB | public WAN files (`python download.py base`) |
 | `MD5SUMS.txt` | | checksums of the files above but `base/` (checked by `python download.py weights`) |
+| `config.json` | 1 KB | a short manifest of the files; Hugging Face counts downloads by it |
 
 </details>
 

@@ -30,7 +30,8 @@ from . import paths
 HF_REPO = "SimonGiebenhain/video-diffusion-avatars"   # Hugging Face model repo: weights, examples/, third_party/
 
 #: our weights in the Hugging Face repo, paths relative to <weights> (README "Weights")
-WEIGHT_FILES = ["MD5SUMS.txt", "vda_full.safetensors", "vda_fast_base.safetensors", "vda_fast_student.safetensors",
+#: config.json (a short manifest) is also the file Hugging Face counts downloads by: one per `download.py weights`
+WEIGHT_FILES = ["config.json", "MD5SUMS.txt", "vda_full.safetensors", "vda_fast_base.safetensors", "vda_fast_student.safetensors",
                 "xnemo_disentangler.pt", "text_emb_cache.pt", "driving_bank/nersemble8.npz",
                 "driving_bank/nersemble8.takes.json", "driving_bank/nersemble8_canonical_body.npz",
                 "third_party/xnemo_motion_encoder.pth"]
